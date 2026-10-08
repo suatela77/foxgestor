@@ -47,7 +47,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   <script type="application/json" data-clippy-inline-media-manifest="1">{"version":1,"slots":[]}</script>
 
 <script>
-// v28.71 - IMPORTADOR CSV LOTE DENTRO DO GESTOR - NOME FIEL - SAFE INJECTION (não quebra o app)
+// v28.71 - IMPORTADOR CSV LOTE DENTRO DO GESTOR - NOME FIEL
 (function(){
   function parseLine(line){
     let res=[],cur='',inQ=false;
@@ -69,7 +69,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     let iProv=h.findIndex(x=>{let l=x.toLowerCase();return l.includes('provedor')||l.includes('lista');});
     let iPlano=h.findIndex(x=>x.toLowerCase().includes('plano'));
     let iVenc=h.findIndex(x=>x.toLowerCase().includes('venc'));
-    if(iNome<0) throw 'Coluna Nome não encontrada no CSV';
+    if(iNome<0) throw 'Coluna Nome não encontrada';
     let out=[];
     for(let k=1;k<lines.length;k++){
       if(!lines[k].trim())continue;
@@ -91,7 +91,6 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     return out;
   }
   function importarLote(lista){
-    if(!lista||lista.length==0){alert('Nenhum cliente para importar');return;}
     let existentes=[]; try{existentes=JSON.parse(localStorage.getItem('fox_clientes')||'[]');}catch{}
     let receitas=[]; try{receitas=JSON.parse(localStorage.getItem('fox_receitas')||'[]');}catch{}
     let novos=0, atual=0;
@@ -111,32 +110,29 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     });
     localStorage.setItem('fox_clientes', JSON.stringify(existentes));
     localStorage.setItem('fox_receitas', JSON.stringify(receitas));
-    alert('✅ SUCESSO! '+novos+' novos + '+atual+' atualizados com NOME FIEL!\n\nEx: '+lista[0].nome+'\nTotal: '+lista.length+' clientes importados!');
+    alert('✅ SUCESSO! '+novos+' novos + '+atual+' atualizados com NOME FIEL!\nEx: '+lista[0].nome+'\nTotal: '+lista.length);
     location.reload();
   }
   window.foxImportarCSV = function(text){
     try{
       let lista=parseCSV(text);
-      if(lista.length==0){alert('CSV vazio ou sem coluna Nome');return;}
+      if(lista.length==0){alert('CSV vazio');return;}
       if(confirm('Importar '+lista.length+' clientes em LOTE com NOME FIEL?\nPrimeiro: '+lista[0].nome+'\nÚltimo: '+lista[lista.length-1].nome)){
         importarLote(lista);
       }
     }catch(e){alert('Erro CSV: '+e);}
   };
-  // Adiciona botão visível no topo do app após carregar
   function addBtn(){
     if(document.getElementById('btn-csv-lote')) return;
-    let bar = document.querySelector('header') || document.body;
-    let btn = document.createElement('div');
+    let btn=document.createElement('div');
     btn.id='btn-csv-lote';
-    btn.style='position:fixed;bottom:80px;right:16px;z-index:9999;background:#00ff88;color:#000;padding:14px 18px;border-radius:30px;font-weight:900;box-shadow:0 4px 20px rgba(0,255,136,.4);cursor:pointer;font-size:14px;';
-    btn.innerHTML='📥 IMPORTAR CSV LOTE (NOME FIEL)';
+    btn.style='position:fixed;bottom:90px;right:16px;z-index:9999;background:#00ff88;color:#000;padding:14px 18px;border-radius:30px;font-weight:900;box-shadow:0 4px 20px rgba(0,255,136,.4);cursor:pointer;font-size:13px;';
+    btn.innerHTML='📥 IMPORTAR CSV LOTE';
     btn.onclick=function(){
       let input=document.createElement('input');
       input.type='file'; input.accept='.csv,.txt';
       input.onchange=function(e){
-        let file=e.target.files[0];
-        if(!file) return;
+        let file=e.target.files[0]; if(!file) return;
         let reader=new FileReader();
         reader.onload=function(ev){window.foxImportarCSV(ev.target.result);};
         reader.readAsText(file);
@@ -144,15 +140,9 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
       input.click();
     };
     document.body.appendChild(btn);
-    // Também adiciona opção de colar CSV no modal existente
-    let style=document.createElement('style');
-    style.innerHTML='#btn-csv-lote:active{transform:scale(0.95)}';
-    document.head.appendChild(style);
   }
-  // Tenta adicionar após 2s e a cada 3s
   setTimeout(addBtn, 2000);
   setInterval(addBtn, 3000);
-  console.log('Fox v28.71 CSV LOTE FIEL carregado');
 })();
 </script>
 
