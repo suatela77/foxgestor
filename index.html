@@ -98,7 +98,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   <script type="application/json" data-clippy-inline-media-manifest="1">{"version":1,"slots":[]}</script>
 
 <script>
-// v28.93 - CORRIGINDO IMPORTAÇÃO - NOMES + MULTIPLOS PONTOS + LOGO PERMANENTE + SAIR NO LOCAL MARCADO
+// v28.94 DEFINITIVO - TUDO JUNTO: LOGO PERMANENTE + SAIR NO LOCAL MARCADO + IMPORTAÇÃO CORRIGIDA NOMES + PONTOS
 (function(){
   const LOGO = window.FOX_LOGO_OFICIAL;
 
@@ -133,7 +133,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
         <div style="margin-bottom:20px;">
           <img src="${LOGO}" style="width:130px;height:130px;object-fit:contain;margin:0 auto 12px;display:block;border-radius:50%;border:3px solid #ff6a00;">
           <h2 style="margin:8px 0 0;color:#fff;font-size:22px;font-weight:900;">GESTOR <span style="color:#ff6a00;">FOX</span></h2>
-          <p style="color:#666;font-size:11px;margin-top:4px;letter-spacing:2px;">OFICIAL v28.93</p>
+          <p style="color:#666;font-size:11px;margin-top:4px;letter-spacing:2px;">OFICIAL v28.94 DEFINITIVO</p>
         </div>
         <div style="text-align:left;">
           <label style="color:#aaa;font-size:12px;font-weight:600;margin-bottom:6px;display:block;">Usuário</label>
@@ -165,10 +165,8 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     document.getElementById('fox-login-btn').onclick=tentarLogin;
     document.getElementById('fox-login-pass').addEventListener('keypress', function(e){ if(e.key==='Enter') tentarLogin(); });
   }
-
   window.foxLogout = function(){ if(confirm('🚪 Sair do painel?')){ localStorage.removeItem('fox_sessao_atual'); location.reload(); } };
 
-  // FUNÇÃO PARA AJUSTAR RODAPÉ - SAIR NO LOCAL MARCADO
   function ajustarRodapeOriginal(){
     document.querySelectorAll('footer').forEach(footer=>{
       footer.querySelectorAll('span').forEach(span=>{
@@ -183,13 +181,11 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
         }
       });
     });
-
     let existing = document.getElementById('fox-rodape-sair-marcado');
     if(existing) existing.remove();
     let sessao=null; 
     try{ sessao=JSON.parse(localStorage.getItem('fox_sessao_atual')||'null'); }catch{}
     if(!sessao) return;
-
     let barra = document.createElement('div');
     barra.id='fox-rodape-sair-marcado';
     barra.style='position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#000;border-top:3px solid #ff0000;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 -4px 20px rgba(0,0,0,0.8);';
@@ -202,7 +198,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
         <img src="${LOGO}" style="width:32px;height:32px;border-radius:50%;border:2px solid #ff6a00;object-fit:cover;">
         <div style="line-height:1.1;">
           <div style="color:#fff;font-size:11px;font-weight:900;">${nome}</div>
-          <div style="color:#ff6a00;font-size:9px;">SAIR NO LOCAL MARCADO</div>
+          <div style="color:#ff6a00;font-size:9px;">v28.94 DEFINITIVO</div>
         </div>
       </div>
     `;
@@ -210,337 +206,136 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     document.body.style.paddingBottom='70px';
   }
 
-  // ==================== IMPORTAÇÃO CORRIGIDA - NOMES + MULTIPLOS PONTOS ====================
+  // IMPORTAÇÃO CORRIGIDA - NOMES + MULTIPLOS PONTOS
   function parseLine(line){
     let res=[],cur='',inQ=false;
     for(let i=0;i<line.length;i++){
       let c=line[i];
       if(c=='"'){
         if(inQ&&line[i+1]=='"'){cur+='"';i++;}else{inQ=!inQ;}
-      } else if(c==','&&!inQ){
-        res.push(cur);cur='';
-      } else {
-        cur+=c;
-      }
+      } else if(c==','&&!inQ){ res.push(cur);cur=''; } else { cur+=c; }
     }
     res.push(cur);
     return res.map(s=>s.trim().replace(/^"|"$/g,''));
   }
-
-  // Função melhorada que detecta colunas de forma inteligente
   function parseCSVCompleto(text){
     let lines=text.trim().split(/\r?\n/);
-    if(lines.length<2) throw 'CSV vazio ou só cabeçalho';
-    
+    if(lines.length<2) throw 'CSV vazio';
     let header = parseLine(lines[0]);
-    console.log('HEADER CSV:', header);
-    
-    // Detecta índices com busca inteligente
-    let iNome = -1, iZap = -1, iProv = -1, iPlano = -1, iVenc = -1, iPontos = -1, iValor = -1, iObs = -1;
-    
-    header.forEach((col, idx)=>{
-      let l = col.toLowerCase();
-      if(l.includes('nome') && !l.includes('plano') && !l.includes('servico') && iNome<0) iNome=idx;
-      if((l.includes('whatsapp') || l.includes('zap') || l.includes('telefone') || l.includes('celular') || l.includes('contato')) && iZap<0) iZap=idx;
-      if((l.includes('provedor') || l.includes('lista') || l.includes('servi') || l.includes('produto')) && !l.includes('valor') && iProv<0) iProv=idx;
+    let iNome=-1,iZap=-1,iProv=-1,iPlano=-1,iVenc=-1,iPontos=-1,iValor=-1;
+    header.forEach((col,idx)=>{
+      let l=col.toLowerCase();
+      if(l.includes('nome') && !l.includes('plano') && iNome<0) iNome=idx;
+      if((l.includes('whatsapp')||l.includes('zap')||l.includes('telefone')||l.includes('celular')) && iZap<0) iZap=idx;
+      if((l.includes('provedor')||l.includes('lista')||l.includes('servi')) && !l.includes('valor') && iProv<0) iProv=idx;
       if(l.includes('plano') && iPlano<0) iPlano=idx;
-      if((l.includes('venc') || l.includes('data') || l.includes('expira')) && !l.includes('inicio') && iVenc<0) iVenc=idx;
-      if((l.includes('ponto') || l.includes('qtd') || l.includes('quantidade') || l.includes('telas') || l.includes('conex')) && iPontos<0) iPontos=idx;
-      if((l.includes('valor') || l.includes('preço') || l.includes('preco') || l.includes('mensal')) && !l.includes('plano') && iValor<0) iValor=idx;
-      if(l.includes('obs') && iObs<0) iObs=idx;
+      if((l.includes('venc')||l.includes('data')) && !l.includes('inicio') && iVenc<0) iVenc=idx;
+      if((l.includes('ponto')||l.includes('qtd')||l.includes('quantidade')||l.includes('telas')) && iPontos<0) iPontos=idx;
+      if((l.includes('valor')||l.includes('preço')||l.includes('preco')) && !l.includes('plano') && iValor<0) iValor=idx;
     });
-
-    // Fallbacks
-    if(iNome<0) iNome=0; // Primeira coluna geralmente é nome
-    if(iZap<0){
-      // Tenta segunda coluna como zap se parecer número
-      for(let j=1;j<header.length;j++){
-        if(header[j].toLowerCase().includes('zap') || header[j].toLowerCase().includes('fone')){ iZap=j; break; }
-      }
-    }
-
-    console.log(`Índices detectados: Nome=${iNome}, Zap=${iZap}, Prov=${iProv}, Plano=${iPlano}, Venc=${iVenc}, Pontos=${iPontos}, Valor=${iValor}`);
-
-    if(iNome<0) throw 'Coluna Nome não encontrada! Cabeçalho: '+header.join(',');
-
-    let clientes = [];
-    let erros = [];
-
+    if(iNome<0) iNome=0;
+    let clientes=[];
     for(let k=1;k<lines.length;k++){
-      let linha = lines[k].trim();
-      if(!linha) continue;
-      
-      let cols = parseLine(linha);
-      if(cols.length <= iNome) continue;
-
-      let nome = (cols[iNome]||'').trim();
-      // Limpa nome - remove aspas extras, mantém nome completo
-      nome = nome.replace(/^"+|"+$/g,'').trim();
-      if(!nome || nome.toLowerCase() === 'nome' || nome.length < 2) continue;
-
-      let zap = '';
-      if(iZap>=0 && cols[iZap]) zap = cols[iZap].replace(/\D/g,'');
-      
-      let prov = 'LISTA FOX';
-      if(iProv>=0 && cols[iProv]) prov = cols[iProv].trim() || 'LISTA FOX';
-      
-      let planoRaw = '';
-      if(iPlano>=0 && cols[iPlano]) planoRaw = cols[iPlano].trim();
-      
-      let vencRaw = '';
-      if(iVenc>=0 && cols[iVenc]) vencRaw = cols[iVenc].trim();
-
-      let pontos = 1;
-      if(iPontos>=0 && cols[iPontos]){
-        let p = parseInt(cols[iPontos].replace(/\D/g,''));
-        if(p>0 && p<100) pontos = p;
-      }
-
-      let obs = '';
-      if(iObs>=0 && cols[iObs]) obs = cols[iObs].trim();
-
-      // Valor - tenta extrair de plano ou coluna valor
-      let valor = 30;
-      let valorStr = '';
-      if(iValor>=0 && cols[iValor]) valorStr = cols[iValor];
-      else if(planoRaw) valorStr = planoRaw;
-      
-      let vMatch = valorStr.match(/R\$\s*([\d.,]+)/);
-      if(vMatch){
-        valor = parseFloat(vMatch[1].replace(',','.'))||30;
-      } else {
-        let num = parseFloat(valorStr.replace(',','.').replace(/[^0-9.]/g,''));
-        if(num>0 && num<10000) valor = num;
-      }
-
-      // Vencimento - tenta vários formatos
-      let vencISO='';
-      if(vencRaw){
-        let m=vencRaw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
-        if(m){
-          let d=parseInt(m[1]),mo=parseInt(m[2]),y=parseInt(m[3]); 
-          if(y<100) y+=2000; 
-          if(mo>=1 && mo<=12 && d>=1 && d<=31){
-            vencISO=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-          }
-        }
-      }
-      if(!vencISO){
-        let dt=new Date(); 
-        dt.setDate(dt.getDate()+30); 
-        vencISO=dt.toISOString().slice(0,10);
-      }
-
-      // Cria cliente com TODOS os dados
-      let clienteBase = {
-        nome: nome, // Nome completo preservado
-        zap: zap,
-        servico: prov,
-        valor: valor,
-        valorOriginal: valor,
-        fim: vencISO,
-        plano: planoRaw || `MENSAL(R$${valor.toFixed(2)})`,
-        pontos: pontos,
-        obs: obs,
-        inicio: new Date().toISOString().slice(0,10),
-        status: 'ativo'
-      };
-
-      // Se cliente tem mais de 1 ponto, cria múltiplos registros ou um registro com pontos
+      let linha=lines[k].trim(); if(!linha) continue;
+      let cols=parseLine(linha);
+      if(cols.length<=iNome) continue;
+      let nome=(cols[iNome]||'').trim().replace(/^"+|"+$/g,'').trim();
+      if(!nome || nome.toLowerCase()==='nome' || nome.length<2) continue;
+      let zap=''; if(iZap>=0 && cols[iZap]) zap=cols[iZap].replace(/\D/g,'');
+      let prov='LISTA FOX'; if(iProv>=0 && cols[iProv]) prov=cols[iProv].trim()||'LISTA FOX';
+      let planoRaw=''; if(iPlano>=0 && cols[iPlano]) planoRaw=cols[iPlano].trim();
+      let vencRaw=''; if(iVenc>=0 && cols[iVenc]) vencRaw=cols[iVenc].trim();
+      let pontos=1; if(iPontos>=0 && cols[iPontos]){ let p=parseInt(cols[iPontos].replace(/\D/g,'')); if(p>0&&p<100) pontos=p; }
+      let valor=30; let valorStr=''; if(iValor>=0 && cols[iValor]) valorStr=cols[iValor]; else if(planoRaw) valorStr=planoRaw;
+      let vMatch=valorStr.match(/R\$\s*([\d.,]+)/); if(vMatch){ valor=parseFloat(vMatch[1].replace(',','.'))||30; } else { let num=parseFloat(valorStr.replace(',','.').replace(/[^0-9.]/g,'')); if(num>0&&num<10000) valor=num; }
+      let vencISO=''; if(vencRaw){ let m=vencRaw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){ let d=parseInt(m[1]),mo=parseInt(m[2]),y=parseInt(m[3]); if(y<100) y+=2000; if(mo>=1&&mo<=12&&d>=1&&d<=31){ vencISO=y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0'); } } }
+      if(!vencISO){ let dt=new Date(); dt.setDate(dt.getDate()+30); vencISO=dt.toISOString().slice(0,10); }
+      let clienteBase={ nome:nome, zap:zap, servico:prov, valor:valor, valorOriginal:valor, fim:vencISO, plano:planoRaw||`MENSAL(R$${valor.toFixed(2)})`, pontos:pontos, inicio:new Date().toISOString().slice(0,10), status:'ativo' };
       if(pontos>1){
-        // Cria 1 cliente com campo pontos e valor multiplicado, OU múltiplos clientes
-        // Vamos criar 1 cliente mas com valor total = valor * pontos e campo pontos
-        clienteBase.nome = nome; // Mantém nome original
-        clienteBase.valor = valor * pontos;
-        clienteBase.valorOriginal = valor * pontos;
-        clienteBase.obs = (obs ? obs + ' | ' : '') + pontos + ' ponto(s)';
-        // Também cria entradas separadas para cada ponto se necessário
-        // Para compatibilidade, vamos criar pontos entradas com sufixo
+        clienteBase.valor=valor*pontos; clienteBase.valorOriginal=valor*pontos;
         for(let p=0;p<pontos;p++){
-          let clientePonto = {...clienteBase};
-          clientePonto.id = Date.now().toString() + '_' + k + '_' + p + '_' + Math.random().toString(36).slice(2,5);
-          if(pontos>1){
-            // Se quiser mostrar como "Cliente - Ponto 1", descomente abaixo:
-            // clientePonto.nome = pontos>1 ? `${nome} - Ponto ${p+1}` : nome;
-            clientePonto.nome = nome; // Mantém mesmo nome
-            clientePonto.pontoAtual = p+1;
-            clientePonto.totalPontos = pontos;
-          } else {
-            clientePonto.id = Date.now().toString() + '_' + k + '_' + Math.random().toString(36).slice(2,5);
-          }
-          clientes.push(clientePonto);
+          let cp={...clienteBase};
+          cp.id=Date.now().toString()+'_'+k+'_'+p+'_'+Math.random().toString(36).slice(2,5);
+          cp.nome=nome; cp.pontoAtual=p+1; cp.totalPontos=pontos;
+          clientes.push(cp);
         }
       } else {
-        clienteBase.id = Date.now().toString() + '_' + k + '_' + Math.random().toString(36).slice(2,5);
-        clienteBase.pontoAtual = 1;
-        clienteBase.totalPontos = 1;
+        clienteBase.id=Date.now().toString()+'_'+k+'_'+Math.random().toString(36).slice(2,5);
+        clienteBase.pontoAtual=1; clienteBase.totalPontos=1;
         clientes.push(clienteBase);
       }
     }
-
-    console.log(`Total clientes parseados: ${clientes.length}`);
-    if(clientes.length===0) throw 'Nenhum cliente válido encontrado! Verifique coluna Nome';
-
+    if(clientes.length===0) throw 'Nenhum cliente válido';
     return clientes;
   }
-
   function importarLoteCorrigido(lista){
-    let existentes=[]; 
-    try{existentes=JSON.parse(localStorage.getItem('fox_clientes')||'[]');}catch{}
-    let receitas=[]; 
-    try{receitas=JSON.parse(localStorage.getItem('fox_receitas')||'[]');}catch{}
-    
+    let existentes=[]; try{existentes=JSON.parse(localStorage.getItem('fox_clientes')||'[]');}catch{}
+    let receitas=[]; try{receitas=JSON.parse(localStorage.getItem('fox_receitas')||'[]');}catch{}
     let importados=0;
     lista.forEach(cliente=>{
-      // Garante que nome está presente
-      if(!cliente.nome || cliente.nome.trim().length < 2){
-        console.warn('Cliente sem nome ignorado:', cliente);
-        return;
-      }
-      
-      // Cria ID único se não tiver
-      if(!cliente.id){
-        cliente.id = Date.now().toString() + Math.random().toString(36).slice(2,9);
-      }
-
-      // Garante campos obrigatórios
-      if(!cliente.inicio) cliente.inicio = new Date().toISOString().slice(0,10);
-      if(!cliente.status) cliente.status = 'ativo';
-      if(!cliente.servico) cliente.servico = 'LISTA FOX';
-      if(!cliente.valor) cliente.valor = 30;
-      
+      if(!cliente.nome || cliente.nome.trim().length<2) return;
+      if(!cliente.id) cliente.id=Date.now().toString()+Math.random().toString(36).slice(2,9);
+      if(!cliente.inicio) cliente.inicio=new Date().toISOString().slice(0,10);
+      if(!cliente.status) cliente.status='ativo';
       existentes.unshift(cliente);
-      
-      receitas.unshift({
-        valor: cliente.valor,
-        origem: 'Import CSV - ' + cliente.nome,
-        desc: 'Importação ' + cliente.nome + (cliente.totalPontos>1 ? ` (${cliente.pontoAtual}/${cliente.totalPontos})` : ''),
-        data: new Date().toISOString(),
-        clienteNome: cliente.nome,
-        clienteId: cliente.id,
-        obs: cliente.plano || cliente.obs || '',
-        tipo: 'importacao',
-        pontos: cliente.totalPontos || 1
-      });
+      receitas.unshift({ valor:cliente.valor, origem:'Import CSV - '+cliente.nome, data:new Date().toISOString(), clienteNome:cliente.nome, clienteId:cliente.id, obs:cliente.plano||'', tipo:'importacao', pontos:cliente.totalPontos||1 });
       importados++;
     });
-
     localStorage.setItem('fox_clientes', JSON.stringify(existentes));
     localStorage.setItem('fox_receitas', JSON.stringify(receitas));
-    
-    alert(`✅ ${importados} cliente(s)/ponto(s) importados com sucesso!\n\nExemplo: ${lista[0]?.nome || ''} - ${lista[0]?.totalPontos || 1} ponto(s)\nValor: R$ ${lista[0]?.valor || 0}`);
+    alert(`✅ ${importados} cliente(s)/ponto(s) importados!\nEx: ${lista[0]?.nome} - ${lista[0]?.totalPontos||1} ponto(s)`);
     location.reload();
   }
-
   window.foxImportarCSVTexto = function(text){
     try{
-      console.log('Iniciando importação CSV...');
       let lista=parseCSVCompleto(text);
-      
-      let resumo = `Encontrados ${lista.length} registros:\n`;
-      // Mostra primeiros 3
-      lista.slice(0,3).forEach((c,i)=>{
-        resumo += `${i+1}. ${c.nome} - ${c.totalPontos||1} ponto(s) - R$ ${c.valor}\n`;
-      });
-      if(lista.length>3) resumo += `... e mais ${lista.length-3}\n`;
-      resumo += `\nImportar?`;
-      
-      if(confirm(resumo)){
-        importarLoteCorrigido(lista);
-      }
-    }catch(e){
-      console.error('Erro importação:', e);
-      alert('❌ Erro na importação: '+e+'\n\nVerifique se o CSV tem coluna Nome e dados válidos');
-    }
+      let resumo=`Encontrados ${lista.length} registros:\n`;
+      lista.slice(0,3).forEach((c,i)=>{ resumo+=`${i+1}. ${c.nome} - ${c.totalPontos||1} ponto(s) - R$ ${c.valor}\n`; });
+      if(lista.length>3) resumo+=`... e mais ${lista.length-3}\n`;
+      resumo+=`\nImportar?`;
+      if(confirm(resumo)){ importarLoteCorrigido(lista); }
+    }catch(e){ alert('❌ Erro: '+e); }
   };
-
   function abrirModalCSV(){
-    let modal=document.createElement('div'); 
-    modal.style='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px;';
+    let modal=document.createElement('div'); modal.style='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:16px;';
     let modo = window.FOX_REVENDA ? 'REVENDA '+window.FOX_REVENDA : 'MASTER';
-    modal.innerHTML=`
-      <div style="background:#151515;border:1px solid #333;border-radius:16px;padding:16px;width:100%;max-width:500px;">
-        <h3 style="margin:0 0 8px;color:#00ff88;">📥 Importar CSV Corrigido - ${modo}</h3>
-        <p style="color:#aaa;font-size:11px;margin:0 0 12px;">✅ Corrige nomes + suporta múltiplos pontos por cliente<br>Colunas: Nome, Whatsapp, Provedor/Lista, Plano, Vencimento, Pontos/Qtd</p>
-        <textarea id=fox-csv-area placeholder="Cole aqui seu CSV...&#10;Ex:&#10;Nome,Whatsapp,Lista,Plano,Vencimento,Pontos&#10;João Silva,11999999999,LISTA FOX,MENSAL R$ 30,15/02/2026,2" style="width:100%;height:220px;background:#0a0a0a;color:#fff;border:1px solid #333;border-radius:10px;padding:10px;font-size:12px;"></textarea>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button id=fox-csv-import style="flex:1;background:#00ff88;color:#000;padding:12px;border:0;border-radius:10px;font-weight:900;">✅ IMPORTAR COM NOMES E PONTOS</button>
-          <button id=fox-csv-close style="background:#333;color:#fff;padding:12px;border:0;border-radius:10px;">X</button>
-        </div>
-      </div>
-    `;
+    modal.innerHTML=`<div style="background:#151515;border:1px solid #333;border-radius:16px;padding:16px;width:100%;max-width:500px;"><h3 style="margin:0 0 8px;color:#00ff88;">📥 Importar CSV Corrigido - ${modo}</h3><p style="color:#aaa;font-size:11px;margin:0 0 12px;">✅ Nomes + múltiplos pontos</p><textarea id=fox-csv-area placeholder="Nome,Whatsapp,Lista,Plano,Vencimento,Pontos" style="width:100%;height:220px;background:#0a0a0a;color:#fff;border:1px solid #333;border-radius:10px;padding:10px;font-size:12px;"></textarea><div style="display:flex;gap:8px;margin-top:10px;"><button id=fox-csv-import style="flex:1;background:#00ff88;color:#000;padding:12px;border:0;border-radius:10px;font-weight:900;">✅ IMPORTAR</button><button id=fox-csv-close style="background:#333;color:#fff;padding:12px;border:0;border-radius:10px;">X</button></div></div>`;
     document.body.appendChild(modal);
     document.getElementById('fox-csv-close').onclick=()=>document.body.removeChild(modal);
-    document.getElementById('fox-csv-import').onclick=()=>{
-      let t=document.getElementById('fox-csv-area').value;
-      if(!t.trim()){alert('Cole o CSV');return;}
-      document.body.removeChild(modal);
-      window.foxImportarCSVTexto(t);
-    };
+    document.getElementById('fox-csv-import').onclick=()=>{ let t=document.getElementById('fox-csv-area').value; if(!t.trim()){alert('Cole CSV');return;} document.body.removeChild(modal); window.foxImportarCSVTexto(t); };
   }
-
   function colocarBotaoImportDentroConfig(){
     if(document.getElementById('btn-import-fixo-config')) return true;
     document.querySelectorAll('*').forEach(el=>{
       if(el.textContent && el.textContent.includes('IMPORTAÇÃO RÁPIDA POR TEXTO')){
-        let p=el; let container=null; 
-        for(let i=0;i<6;i++){ if(p && p.querySelector && p.querySelector('textarea')){container=p;break;} p=p.parentElement; }
+        let p=el; let container=null; for(let i=0;i<6;i++){ if(p && p.querySelector && p.querySelector('textarea')){container=p;break;} p=p.parentElement; }
         if(container && !container.querySelector('#btn-import-fixo-config')){
-          let btn=document.createElement('button'); 
-          btn.id='btn-import-fixo-config'; 
-          let modo = window.FOX_REVENDA ? 'REV '+window.FOX_REVENDA : 'MASTER';
-          btn.innerHTML='📥 IMPORTAR CSV CORRIGIDO - NOMES + PONTOS ('+modo+')'; 
-          btn.style.cssText='width:100%;background:#00ff88;color:#000;padding:12px;border:0;border-radius:10px;font-weight:900;font-size:13px;margin-top:12px;cursor:pointer;'; 
-          btn.onclick=abrirModalCSV; 
-          container.appendChild(btn);
-          
-          // Aviso
-          let aviso = document.createElement('div');
-          aviso.style='margin-top:8px;background:#1a1a1a;border:1px solid #00ff88;border-radius:8px;padding:8px;font-size:10px;color:#aaa;';
-          aviso.innerHTML='✅ <b style="color:#00ff88;">v28.93 CORRIGIDO:</b> Grava nomes corretamente e suporta cliente com mais de 1 ponto (cria múltiplos registros ou valor multiplicado)';
-          container.appendChild(aviso);
+          let btn=document.createElement('button'); btn.id='btn-import-fixo-config'; let modo = window.FOX_REVENDA ? 'REV '+window.FOX_REVENDA : 'MASTER';
+          btn.innerHTML='📥 IMPORTAR CSV CORRIGIDO - NOMES + PONTOS ('+modo+')'; btn.style.cssText='width:100%;background:#00ff88;color:#000;padding:12px;border:0;border-radius:10px;font-weight:900;font-size:13px;margin-top:12px;cursor:pointer;'; btn.onclick=abrirModalCSV; container.appendChild(btn);
         }
       }
     });
   }
-
   function colocarBotaoExcluirNaBarra(){
     if(document.getElementById('btn-excluir-barra-unico')) return true;
     document.querySelectorAll('button').forEach(el=>{
       if(el.textContent && el.textContent.trim().startsWith('Todos (')){
         let bar=el.parentElement;
         if(bar && bar.textContent.includes('Ativos (') && !bar.querySelector('#btn-excluir-barra-unico')){
-          let btn=document.createElement('button'); 
-          btn.id='btn-excluir-barra-unico'; 
-          btn.textContent='🗑️ Excluir Todos';
+          let btn=document.createElement('button'); btn.id='btn-excluir-barra-unico'; btn.textContent='🗑️ Excluir Todos';
           btn.style.cssText='background:#2a0a0a;border:1px solid #ff3333;color:#ff6666;padding:8px 14px;border-radius:20px;font-weight:700;font-size:12px;margin-left:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;';
-          btn.onclick=()=>{
-            let total=0; try{ total=JSON.parse(localStorage.getItem('fox_clientes')||'[]').length; }catch{}
-            if(total==0){alert('Nenhum cliente');return;}
-            if(!confirm('⚠️ EXCLUIR TODOS os '+total+' clientes?')) return;
-            let conf=prompt('Digite EXCLUIR:'); if(conf!=='EXCLUIR'){alert('Cancelado');return;}
-            localStorage.removeItem('fox_clientes'); localStorage.removeItem('fox_receitas');
-            alert('✅ '+total+' excluídos!'); location.reload();
-          };
-          bar.appendChild(btn); 
-          return true;
+          btn.onclick=()=>{ let total=0; try{ total=JSON.parse(localStorage.getItem('fox_clientes')||'[]').length; }catch{} if(total==0){alert('Nenhum');return;} if(!confirm('EXCLUIR TODOS '+total+'?')) return; let conf=prompt('Digite EXCLUIR:'); if(conf!=='EXCLUIR')return; localStorage.removeItem('fox_clientes'); localStorage.removeItem('fox_receitas'); alert('✅ Excluídos'); location.reload(); }; bar.appendChild(btn); return true;
         }
       }
-    }); 
-    return false;
+    }); return false;
   }
-
   setTimeout(()=>{ mostrarTelaLogin(); colocarBotaoExcluirNaBarra(); colocarBotaoImportDentroConfig(); ajustarRodapeOriginal(); }, 1000);
   setInterval(()=>{
     if(!localStorage.getItem('fox_sessao_atual')){
       mostrarTelaLogin();
-      let r = document.getElementById('fox-rodape-sair-marcado');
-      if(r) r.remove();
-      document.body.style.paddingBottom='0px';
+      let r=document.getElementById('fox-rodape-sair-marcado'); if(r) r.remove(); document.body.style.paddingBottom='0px';
     } else {
-      colocarBotaoExcluirNaBarra();
-      colocarBotaoImportDentroConfig();
-      ajustarRodapeOriginal();
+      colocarBotaoExcluirNaBarra(); colocarBotaoImportDentroConfig(); ajustarRodapeOriginal();
     }
   }, 2000);
 })();
