@@ -519,8 +519,9 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
             if(total==0){alert('Nenhum cliente');return;}
             if(!confirm('⚠️ EXCLUIR TODOS os '+total+' clientes?')) return;
             let conf=prompt('Digite EXCLUIR:'); if(conf!=='EXCLUIR'){alert('Cancelado');return;}
-            localStorage.removeItem('fox_clientes'); localStorage.removeItem('fox_receitas');
-            alert('✅ '+total+' excluídos!'); location.reload();
+            localStorage.setItem('fox_clientes','[]');
+            localStorage.setItem('fox_receitas','[]');
+            location.reload();
           };
           bar.appendChild(btn); 
           return true;
