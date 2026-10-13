@@ -730,19 +730,34 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   busy=true;const snapshot=JSON.stringify(payload);
   try{status('☁️ Salvando…');const result=await withTimeout(client.rpc('fox_save_state',{p_payload:JSON.parse(snapshot),p_expected_revision:revision}),'Sincronização');if(result.error)throw result.error;revision=Number(result.data);lastSaved=snapshot;
    if(JSON.stringify(payload)===snapshot){dirty=false;raw.removeItem(cacheKey('pending'));status('☁️ Salvo online')}else{remember();status('☁️ Alterações pendentes')}
-  }catch(error){remember();if(error.code==='40001'||String(error.message).includes('FOX_CONFLICT'))lock('Dados alterados em outro aparelho. Suas alterações foram preservadas aqui. Baixe uma cópia antes de abrir os dados online.');else status('⚠️ Alterações neste aparelho ainda não enviadas. Verifique a conexão e toque em ☁️ para tentar novamente.')}
+  }catch(error){remember();if(error.code==='42501'){lock('Seu acesso foi suspenso ou o teste venceu. As alterações pendentes foram preservadas.');return}if(error.code==='40001'||String(error.message).includes('FOX_CONFLICT'))lock('Dados alterados em outro aparelho. Suas alterações foram preservadas aqui. Baixe uma cópia antes de abrir os dados online.');else status('⚠️ Alterações neste aparelho ainda não enviadas. Verifique a conexão e toque em ☁️ para tentar novamente.')}
   finally{busy=false;if(dirty&&!blocked){clearTimeout(timer);timer=setTimeout(flush,10000)}}
  }
  function change(k,value){if(blocked)throw Error('Sincronização bloqueada; confira o aviso.');const field=fields[k];const rows=value===null?[]:JSON.parse(value);if(!Array.isArray(rows))throw Error('Formato inválido: '+field);if(JSON.stringify(payload[field])===JSON.stringify(rows))return;payload[field]=rows;remember();status('☁️ Alterações pendentes');clearTimeout(timer);timer=setTimeout(flush,500)}
  function installStorage(){
-  const session=JSON.stringify({id:null,tipo:'master',login:user.email,nome:'MASTER',cloudUid:user.id});
+  const session=JSON.stringify({id:null,tipo:account.role,login:user.email,nome:account.role==='master'?'MASTER':'REVENDEDOR',cloudUid:user.id});
   window.FOX_REVENDA=null;window.FOX_MASTER_KEY='fox_clientes';window.FOX_RECEITA_KEY='fox_receitas';window.FOX_CLOUD_MODE=true;
   window.foxStorage={getItem(k){if(k==='fox_sessao_atual')return session;if(k==='clientes')k='fox_clientes';if(fields[k])return JSON.stringify(payload[fields[k]]);if(k==='fox_clientes_planos_import_20261010')return '1';return raw.getItem(cacheKey(k))},setItem(k,value){if(k==='fox_sessao_atual')return;if(k==='clientes')k='fox_clientes';if(fields[k])return change(k,value);raw.setItem(cacheKey(k),String(value))},removeItem(k){if(k==='fox_sessao_atual'){window.foxCloudLogout();return}if(fields[k])return change(k,null);raw.removeItem(cacheKey(k))},key(i){return raw.key(i)},get length(){return raw.length}};
  }
+
+ function setupTrialAdmin(){
+  const open=document.createElement('button');open.textContent='Revendedores';open.style.cssText='display:block;margin:12px auto;padding:12px 20px;background:#ff6a00;border:0;border-radius:12px;font:700 16px system-ui';document.body.insertBefore(open,document.getElementById('root'));
+  const dialog=document.createElement('dialog');dialog.style.cssText='width:min(440px,calc(100vw - 24px));max-height:85vh;overflow:auto;box-sizing:border-box;padding:20px;background:#171717;color:white;border:2px solid #ff6a00;border-radius:18px;font:15px system-ui';
+  dialog.innerHTML='<h2>Revendedores e testes</h2><p>Crie primeiro o login em Authentication → Users no Supabase. Aqui você libera, renova ou suspende o acesso.</p><form><label>Nome<input name="name" required></label><label>E-mail<input name="email" type="email" required></label><label>WhatsApp com DDD<input name="whatsapp" inputmode="tel" required></label><label>Primeiro dia<input name="start" type="date" required></label><label>Último dia, inclusive<input name="end" type="date" required></label><p><label><input name="active" type="checkbox" checked> Acesso liberado</label></p><button type="submit">Salvar acesso</button></form><p role="status"></p><div class="trial-list"></div><button type="button" class="close">Fechar</button>';
+  const css=document.createElement('style');css.textContent='dialog label{display:block;margin:10px 0}dialog form input:not([type=checkbox]){display:block;box-sizing:border-box;width:100%;padding:12px;margin-top:5px;background:#0d0d0d;color:white;border:1px solid #777;border-radius:8px;font:16px system-ui;color-scheme:dark}dialog button{padding:12px;margin:5px 0;background:#ff6a00;color:#111;border:0;border-radius:8px;font:700 15px system-ui}';document.head.appendChild(css);document.body.appendChild(dialog);
+  const form=dialog.querySelector('form'),msg=dialog.querySelector('[role=status]'),list=dialog.querySelector('.trial-list');
+  form.elements.start.value=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());form.elements.end.value=form.elements.start.value;
+  const listTrials=async()=>{list.replaceChildren();const r=await withTimeout(client.rpc('fox_list_trials'),'Consulta dos revendedores');if(r.error)throw r.error;for(const row of r.data||[]){const b=document.createElement('button');b.style.cssText='width:100%;text-align:left;overflow-wrap:anywhere;background:#292929;color:white;border:1px solid #777';b.textContent=(row.name||row.email)+' · '+row.access_start+' até '+row.access_end+' · '+(row.active?'Liberado':'Suspenso');b.onclick=()=>{for(const key of ['name','email','whatsapp'])form.elements[key].value=row[key]||'';form.elements.start.value=row.access_start;form.elements.end.value=row.access_end;form.elements.active.checked=row.active};list.appendChild(b)}};
+  open.onclick=async()=>{dialog.showModal();try{await listTrials();msg.textContent=''}catch(e){msg.textContent='Aplique o SQL dos revendedores no Supabase. '+e.message}};
+  dialog.querySelector('.close').onclick=()=>dialog.close();
+  form.onsubmit=async event=>{event.preventDefault();const button=form.querySelector('button');button.disabled=true;try{if(form.elements.end.value<form.elements.start.value)throw Error('Confira o período do teste.');const r=await withTimeout(client.rpc('fox_manage_trial',{p_email:form.elements.email.value.trim(),p_name:form.elements.name.value.trim(),p_whatsapp:form.elements.whatsapp.value.replace(/\D/g,''),p_start:form.elements.start.value,p_end:form.elements.end.value,p_active:form.elements.active.checked}),'Liberação do acesso');if(r.error)throw r.error;msg.textContent='Acesso salvo no banco.';await listTrials()}catch(e){msg.textContent=e.message||'Falha ao salvar'}finally{button.disabled=false}};
+ }
+
  async function launch(){
   const verified=await withTimeout(client.auth.getUser(),"Verificação do login");if(verified.error||!verified.data.user)throw Error('Entre novamente para verificar seu acesso.');user=verified.data.user;
   message.textContent='Conferindo sua permissão…';const permission=await withTimeout(client.from('fox_accounts').select('role,active').eq('user_id',user.id).maybeSingle(),'Consulta da conta');if(permission.error)throw permission.error;account=permission.data;
-  if(!account?.active||account.role!=='master'||user.id!==masterUid)throw Error('Conta sem acesso ao painel master.');
+  if(!account?.active||!['master','revenda'].includes(account.role)||(account.role==='master'&&user.id!==masterUid))throw Error('Conta sem acesso liberado.');
+  if(account.role==='revenda'){const allowed=await withTimeout(client.rpc('fox_access_allowed'),'Prazo de acesso');if(allowed.error)throw allowed.error;if(!allowed.data)throw Error('Teste não iniciado ou vencido. Solicite a liberação ao administrador.');}
   message.textContent='Carregando seus dados…';const result=await withTimeout(client.from('fox_state').select('payload,revision').eq('user_id',user.id).maybeSingle(),'Carregamento dos dados');if(result.error)throw result.error;
   const rememberedActivity=Number(raw.getItem(cacheKey('activity'))||Date.now());
   if(Date.now()-rememberedActivity>=idleLimit){await client.auth.signOut({scope:'local'});throw Error('Sessão encerrada após 30 minutos sem atividade. Entre novamente.');}
@@ -750,7 +765,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   let saved=result.data;const localPending=pending();
   if(localPending){validate(localPending.payload);if(saved&&JSON.stringify(saved.payload)===JSON.stringify(localPending.payload)){raw.removeItem(cacheKey('pending'))}else if(Number(saved?.revision||0)!==Number(localPending.revision)){lock('Há alterações pendentes e uma versão diferente no banco. Baixe as pendências antes de continuar.');return}else{payload=localPending.payload;revision=Number(localPending.revision);dirty=true}}
   if(!payload){if(saved){payload=validate(saved.payload);revision=Number(saved.revision)}else{
-   const initial={};for(const[k,field]of Object.entries(fields)){const value=raw.getItem(k);initial[field]=value===null?[]:JSON.parse(value)}validate(initial);
+   const initial={};for(const[k,field]of Object.entries(fields)){const value=account.role==='master'?raw.getItem(k):null;initial[field]=value===null?[]:JSON.parse(value)}validate(initial);
    const count=Object.values(initial).reduce((sum,rows)=>sum+rows.length,0);
    if(count&&!confirm('Importar os dados atuais deste aparelho para sua conta online?\n'+Object.entries(initial).map(([field,rows])=>field+': '+rows.length).join('\n')+'\n\nSe ainda não fez um backup no Drive, cancele e faça o backup antes de atualizar.'))throw Error('Importação cancelada. Seus dados locais foram mantidos.');
    message.textContent='Importando os dados…';const first=await withTimeout(client.rpc('fox_save_state',{p_payload:initial,p_expected_revision:0}),'Importação');if(first.error)throw first.error;payload=initial;revision=Number(first.data);
@@ -783,6 +798,10 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     await withTimeout(new Promise((resolve,reject)=>{const done='foxModuleReady_'+Date.now();window[done]=()=>{delete window[done];resolve()};script.textContent+='\nwindow['+JSON.stringify(done)+']();';script.onerror=()=>{delete window[done];reject(Error('Falha ao abrir o painel. Atualize a página.'))};document.body.appendChild(script)}),'Abertura do painel');
    }else document.body.appendChild(script);
   }
+  
+  if(account.role==='master')setupTrialAdmin();
+  else setInterval(async()=>{try{const r=await client.rpc('fox_access_allowed');if(!r.error&&!r.data){blocked=true;gate.style.display='flex';message.textContent='Seu teste venceu ou o acesso foi suspenso. Contate o administrador.';document.getElementById('root').style.display='none'}}catch{}},30000);
+
   window.foxLogout=()=>{if(confirm('Sair do painel?'))window.foxCloudLogout()};
   gate.style.display='none';if(dirty)flush();
   addEventListener('online',flush);addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue=''}});
