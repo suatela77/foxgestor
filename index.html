@@ -786,6 +786,25 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   window.foxStorage={getItem(k){if(k==='fox_sessao_atual')return session;if(k==='clientes')k='fox_clientes';if(fields[k])return JSON.stringify(payload[fields[k]]);if(k==='fox_clientes_planos_import_20261010')return '1';return raw.getItem(cacheKey(k))},setItem(k,value){if(k==='fox_sessao_atual')return;if(k==='clientes')k='fox_clientes';if(fields[k])return change(k,value);raw.setItem(cacheKey(k),String(value))},removeItem(k){if(k==='fox_sessao_atual'){window.foxCloudLogout();return}if(fields[k])return change(k,null);raw.removeItem(cacheKey(k))},key(i){return raw.key(i)},get length(){return raw.length}};
  }
 
+
+ function setupWhatsApp(){
+  const open=document.createElement('button');open.textContent='WhatsApp';open.style.cssText='display:block;margin:12px auto;padding:12px 20px;background:#00d879;color:#111;border:0;border-radius:12px;font:700 16px system-ui';document.body.insertBefore(open,document.getElementById('root'));
+  const dialog=document.createElement('dialog');dialog.id='fox-whatsapp-dialog';dialog.style.cssText='width:min(440px,calc(100vw - 24px));max-height:85vh;overflow:auto;box-sizing:border-box;padding:20px;background:#171717;color:white;border:2px solid #00d879;border-radius:18px;font:15px system-ui';
+  dialog.innerHTML='<h2>WhatsApp do Fox</h2><p class="connection" role="status">Consulte sua conexão.</p><p class="destination"></p><p>Mensagem de teste: “Teste do Gestor Fox: integração com WhatsApp funcionando.”</p><button class="refresh" type="button">Atualizar conexão</button><button class="test" type="button" disabled>Enviar teste</button><p class="result" role="status"></p><p>Esta etapa verifica a integração. Os avisos automáticos ainda não estão ativados.</p><button class="close" type="button">Fechar</button>';
+  document.body.appendChild(dialog);
+  for(const b of dialog.querySelectorAll('button'))b.style.cssText='padding:12px;margin:5px;background:#00d879;color:#111;border:0;border-radius:8px;font:700 15px system-ui';
+  const state=dialog.querySelector('.connection'),destination=dialog.querySelector('.destination'),result=dialog.querySelector('.result'),refresh=dialog.querySelector('.refresh'),test=dialog.querySelector('.test');let number='',working=false;
+  async function invoke(body){
+   const session=await client.auth.getSession();if(!session.data.session)throw Error('Entre novamente no Fox.');
+   const response=await client.functions.invoke('fox-whatsapp',{body});
+   if(response.error){let text='Não foi possível conectar. Confira a instalação da integração no Supabase.';try{const detail=await response.error.context.json();if(detail.error)text=detail.error}catch{}throw Error(text)}
+   if(response.data?.error)throw Error(response.data.error);return response.data;
+  }
+  async function check(){if(working)return;working=true;refresh.disabled=true;test.disabled=true;number='';state.textContent='Consultando…';result.textContent='';destination.textContent='';try{const data=await invoke({action:'status'});number=data.testNumber;state.textContent=(data.connected?'Conectado':'Desconectado')+' · '+data.instance;destination.textContent='Destinatário do teste: +'+number;test.disabled=!data.connected}catch(e){state.textContent=e.message}finally{working=false;refresh.disabled=false}}
+  open.onclick=()=>{dialog.showModal();check()};refresh.onclick=check;dialog.querySelector('.close').onclick=()=>dialog.close();
+  test.onclick=async()=>{if(working||!number)return;if(!confirm('Enviar a mensagem de teste para +'+number+'?\n\nTeste do Gestor Fox: integração com WhatsApp funcionando.'))return;working=true;test.disabled=true;refresh.disabled=true;result.textContent='Solicitando teste…';try{const data=await invoke({action:'test',confirm:true,requestId:crypto.randomUUID()});result.textContent=data.message}catch(e){result.textContent=e.message}finally{working=false;refresh.disabled=false;test.disabled=false}};
+ }
+
  function setupTrialAdmin(){
   const open=document.createElement('button');open.textContent='Revendedores';open.style.cssText='display:block;margin:12px auto;padding:12px 20px;background:#ff6a00;border:0;border-radius:12px;font:700 16px system-ui';document.body.insertBefore(open,document.getElementById('root'));
   const dialog=document.createElement('dialog');dialog.style.cssText='width:min(440px,calc(100vw - 24px));max-height:85vh;overflow:auto;box-sizing:border-box;padding:20px;background:#171717;color:white;border:2px solid #ff6a00;border-radius:18px;font:15px system-ui';
@@ -849,6 +868,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
    }else document.body.appendChild(script);
   }
   
+  setupWhatsApp();
   if(account.role==='master')setupTrialAdmin();
   else setInterval(async()=>{try{const r=await client.rpc('fox_access_allowed');if(!r.error&&!r.data){blocked=true;gate.style.display='flex';message.textContent='Seu teste venceu ou o acesso foi suspenso. Contate o administrador.';document.getElementById('root').style.display='none'}}catch{}},30000);
 
