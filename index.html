@@ -594,28 +594,22 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   }
 
   function colocarBotaoImportDentroConfig(){
-    if(document.getElementById('btn-import-fixo-config')) return true;
-    document.querySelectorAll('*').forEach(el=>{
-      if(el.textContent && el.textContent.includes('IMPORTAÇÃO RÁPIDA POR TEXTO')){
-        let p=el; let container=null; 
-        for(let i=0;i<6;i++){ if(p && p.querySelector && p.querySelector('textarea')){container=p;break;} p=p.parentElement; }
-        if(container && !container.querySelector('#btn-import-fixo-config')){
-          let btn=document.createElement('button'); 
-          btn.id='btn-import-fixo-config'; 
-          let modo = window.FOX_REVENDA ? 'REV '+window.FOX_REVENDA : 'MASTER';
-          btn.innerHTML='📥 IMPORTAR CSV CORRIGIDO - NOMES + PONTOS ('+modo+')'; 
-          btn.style.cssText='width:100%;background:#00ff88;color:#000;padding:12px;border:0;border-radius:10px;font-weight:900;font-size:13px;margin-top:12px;cursor:pointer;'; 
-          btn.onclick=abrirModalCSV; 
-          container.appendChild(btn);
-          
-          // Aviso
-          let aviso = document.createElement('div');
-          aviso.style='margin-top:8px;background:#1a1a1a;border:1px solid #00ff88;border-radius:8px;padding:8px;font-size:10px;color:#aaa;';
-          aviso.innerHTML='✅ <b style="color:#00ff88;">v28.93 CORRIGIDO:</b> Grava nomes corretamente e suporta cliente com mais de 1 ponto (cria múltiplos registros ou valor multiplicado)';
-          container.appendChild(aviso);
-        }
-      }
-    });
+    const root=document.getElementById('root');
+    if(!root)return false;
+    const heading=[...root.querySelectorAll('*')].find(el=>
+      el.textContent.includes('IMPORTAÇÃO RÁPIDA POR TEXTO')&&
+      ![...el.children].some(child=>child.textContent.includes('IMPORTAÇÃO RÁPIDA POR TEXTO')));
+    let container=heading;
+    while(container&&container!==root&&!container.querySelector('textarea'))container=container.parentElement;
+    if(!container||container===root)return false;
+    const existing=[...document.querySelectorAll('[id="btn-import-fixo-config"]')];
+    let btn=existing.find(el=>el.parentElement===container);
+    existing.forEach(el=>{if(el!==btn)el.remove()});
+    if(btn)return true;
+    btn=document.createElement('button');btn.id='btn-import-fixo-config';btn.type='button';
+    btn.textContent='📥 Importar CSV com nomes e pontos';
+    btn.style.cssText='width:100%;background:#00ff88;color:#000;padding:12px;border:0;border-radius:10px;font-weight:900;font-size:13px;margin-top:12px;cursor:pointer;';
+    btn.onclick=abrirModalCSV;container.appendChild(btn);return true;
   }
 
   function colocarBotaoExcluirNaBarra(){
@@ -924,5 +918,19 @@ window.foxShowHourly=async function(date,city){
  dialog.replaceChildren();const title=document.createElement('h2');title.textContent='Previsão por hora · '+date.split('-').reverse().join('/')+(city?' · '+city:'');dialog.appendChild(title);const close=document.createElement('button');close.textContent='Fechar';close.onclick=()=>dialog.close();dialog.appendChild(close);const content=document.createElement('div');content.textContent='Carregando…';dialog.appendChild(content);if(!dialog.open)dialog.showModal();const request=Symbol();dialog.foxRequest=request;
  try{const coords=window.foxWeatherCoords;if(!coords)throw Error('Atualize a localização ou o clima antes de consultar.');const params=new URLSearchParams({latitude:coords.latitude,longitude:coords.longitude,hourly:'temperature_2m,precipitation_probability',timezone:'auto',start_date:date,end_date:date});const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);let response;try{response=await fetch('https://api.open-meteo.com/v1/forecast?'+params,{signal:controller.signal})}finally{clearTimeout(timer)}if(!response.ok)throw Error('Previsão indisponível. Tente novamente.');const data=await response.json();if(dialog.foxRequest!==request)return;const rows=data.hourly;if(!rows?.time?.length)throw Error('Sem dados para esse dia.');content.replaceChildren();const note=document.createElement('p');note.textContent='Horário local da previsão · Open-Meteo';content.appendChild(note);const table=document.createElement('table');const head=table.createTHead().insertRow();for(const text of ['Hora','Temperatura','Chance de chuva']){const th=document.createElement('th');th.textContent=text;head.appendChild(th)}const body=table.createTBody();rows.time.forEach((time,i)=>{if(time.slice(0,10)!==date)return;const tr=body.insertRow();for(const value of [time.slice(11,16),rows.temperature_2m[i]==null?'—':Math.round(rows.temperature_2m[i])+' °C',rows.precipitation_probability[i]==null?'—':rows.precipitation_probability[i]+'%'])tr.insertCell().textContent=value});content.appendChild(table)}catch(error){if(dialog.foxRequest===request)content.textContent=error.name==='AbortError'?'A consulta demorou. Tente novamente.':error.message}
 };
-</script></body>
+</script>
+<style id="fox-back-top-style">
+#fox-back-top{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:140;width:44px;height:44px;padding:0;border:2px solid #ffb16e;border-radius:50%;background:#ff6a00;color:#111;font:900 26px/40px system-ui;box-shadow:0 2px 10px #0008;cursor:pointer}
+#fox-back-top[hidden]{display:none!important}
+body:has(dialog[open]) #fox-back-top,body:has(#root .fixed.inset-0) #fox-back-top{display:none!important}
+</style>
+<script id="fox-back-top-script">
+(()=>{
+ const button=document.createElement('button');button.id='fox-back-top';button.type='button';button.textContent='↑';button.title='Voltar ao topo';button.setAttribute('aria-label','Voltar ao topo');button.hidden=true;
+ const sync=()=>{button.hidden=Math.max(window.scrollY||0,document.documentElement.scrollTop||0,document.body.scrollTop||0)<400||!document.getElementById('fox-cloud-exit')};
+ button.onclick=()=>{window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})};
+ document.body.appendChild(button);window.addEventListener('scroll',sync,{passive:true});window.addEventListener('resize',sync,{passive:true});setInterval(sync,1000);sync();
+})();
+</script>
+</body>
 </html>
