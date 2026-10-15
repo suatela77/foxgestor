@@ -926,9 +926,9 @@ body:has(dialog[open]) #fox-back-top,body:has(#root .fixed.inset-0) #fox-back-to
 </style>
 <script id="fox-back-top-script">
 (()=>{
- const button=document.createElement('button');button.id='fox-back-top';button.type='button';button.textContent='↑';button.title='Voltar ao topo';button.setAttribute('aria-label','Voltar ao topo');button.hidden=true;
+ const button=document.createElement('button');button.id='fox-back-top';button.type='button';button.textContent='↑';button.title='Voltar ao início da lista de clientes';button.setAttribute('aria-label','Voltar ao início da lista de clientes');button.hidden=true;
  const sync=()=>{button.hidden=Math.max(window.scrollY||0,document.documentElement.scrollTop||0,document.body.scrollTop||0)<400||!document.getElementById('fox-cloud-exit')};
- button.onclick=()=>{window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})};
+ button.onclick=()=>{const target=document.getElementById('fox-client-search-row');const behavior=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth';if(target){window.scrollTo({top:Math.max(0,target.getBoundingClientRect().top+window.scrollY-16),behavior})}else{window.scrollTo({top:0,behavior})}};
  document.body.appendChild(button);window.addEventListener('scroll',sync,{passive:true});window.addEventListener('resize',sync,{passive:true});setInterval(sync,1000);sync();
 })();
 </script>
