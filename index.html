@@ -148,8 +148,11 @@ window.foxReadNotificationSwitches=function(prefix){const result={};for(const ke
 </script>
 
 <style id="fox-footer-flow-fix">
+#root>div.min-h-screen{min-height:0!important;}
+#root main{flex:0 0 auto!important;padding-bottom:16px!important;}
+
 /* Keep logout in document flow, outside the forms' visible area. */
-#fox-bottom-dock{position:relative!important;inset:auto!important;z-index:0!important;flex-shrink:0;margin:16px auto 0!important;}
+#fox-bottom-dock{position:relative!important;inset:auto!important;z-index:0!important;flex-shrink:0;margin:0 auto!important;}
 @supports(height:100dvh){
  #root .max-h-\[92vh\]{max-height:calc(100dvh - 24px)!important;}
  #root .max-h-\[90vh\]{max-height:calc(100dvh - 24px)!important;}
@@ -874,7 +877,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
    }catch(error){message.textContent='Não foi possível concluir a saída. Atualize a página e tente novamente.';blocked=true;gate.style.display='flex';gate.querySelector('#fox-cloud-login').hidden=true;}
    finally{leaving=false;}
   };
-  const footerStyle=document.createElement('style');footerStyle.textContent='body{padding-bottom:100px!important}#fox-rodape-sair-marcado{display:none!important}';document.head.appendChild(footerStyle);
+  const footerStyle=document.createElement('style');footerStyle.textContent='body{padding-bottom:0!important}#fox-rodape-sair-marcado{display:none!important}';document.head.appendChild(footerStyle);
   const noteActivity=()=>{if(blocked||leaving)return;const now=Date.now();if(now-lastActivity>=idleLimit){window.foxCloudLogout({automatic:true});return}if(now-lastActivity>1000){lastActivity=now;raw.setItem(cacheKey('activity'),String(now));}};
   for(const event of ['pointerdown','keydown','scroll','touchstart'])addEventListener(event,noteActivity,{passive:true,capture:true});
   setInterval(()=>{if(!blocked&&!leaving&&Date.now()-lastActivity>=idleLimit)window.foxCloudLogout({automatic:true})},15000);
