@@ -814,7 +814,34 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
    if(response.error){let text='Não foi possível conectar. Confira a instalação da integração no Supabase.';try{const detail=await response.error.context.json();if(detail.error)text=detail.error}catch{}throw Error(text)}
    if(response.data?.error)throw Error(response.data.error);return response.data;
   }
-  async function check(){if(working)return;working=true;refresh.disabled=true;test.disabled=true;number='';state.textContent='Consultando…';result.textContent='';destination.textContent='';try{const data=await invoke({action:'status'});number=data.testNumber;state.textContent=(data.connected?'Conectado':'Desconectado')+' · '+data.instance;destination.textContent='Destinatário do teste: +'+number;test.disabled=!data.connected}catch(e){state.textContent=e.message}finally{working=false;refresh.disabled=false}}
+  async function check(){if(working)return;working=true;refresh.disabled=true;test.disabled=true;number='';state.textContent='Consultando…';result.textContent='';destination.textContent='';try{const data=await invoke({action:'status'});number=/^55[1-9][0-9]{9,10}$/.test(String(data.testNumber||''))?String(data.testNumber):'';state.textContent=(data.connected?'Conectado':'Desconectado')+' · '+data.instance;destination.textContent=number?'Destinatário do teste: +'+number:'Defina abaixo o número para receber o teste.';test.disabled=!data.connected||!number;if(!recipientDirty)recipientInput.value=number}catch(e){state.textContent=e.message}finally{working=false;refresh.disabled=false}}
+  const recipientForm=document.createElement('form');
+  recipientForm.id='fox-test-recipient';
+  recipientForm.innerHTML='<label for="fox-test-number">Número para receber o teste</label><input id="fox-test-number" type="tel" inputmode="tel" autocomplete="tel" maxlength="22" placeholder="(22) 99999-9999" required><p>Informe seu número ou outro WhatsApp seu para conferir o envio. Salvar não envia mensagem.</p><button type="submit">Salvar número de teste</button><p role="status"></p>';
+  destination.after(recipientForm);
+  recipientForm.style.cssText='border:1px solid #555;padding:12px;border-radius:10px;margin:12px 0';
+  const recipientInput=recipientForm.querySelector('input'),recipientSave=recipientForm.querySelector('button'),recipientMessage=recipientForm.querySelector('[role="status"]');
+  recipientInput.style.cssText='box-sizing:border-box;width:100%;padding:12px;background:#090909;color:white;border:1px solid #777;border-radius:8px;font:16px system-ui';
+  recipientSave.style.cssText=refresh.style.cssText;
+  let recipientDirty=false,recipientBusy=false;
+  recipientInput.oninput=()=>{recipientDirty=true;recipientMessage.textContent=''};
+  recipientForm.onsubmit=async event=>{
+   event.preventDefault();if(working||pairBusy||recipientBusy)return;
+   let value=recipientInput.value.replace(/\D/g,'');
+   if(value.length===10||value.length===11)value='55'+value;
+   if(!/^55[1-9][0-9]{9,10}$/.test(value)){recipientMessage.textContent='Informe um número brasileiro com DDD.';recipientInput.focus();return}
+   recipientBusy=true;working=true;recipientSave.disabled=true;recipientInput.disabled=true;refresh.disabled=true;test.disabled=true;pairDisable(true);recipientMessage.textContent='Salvando…';let saved=false;
+   try{
+    const response=await withTimeout(client.rpc('fox_set_whatsapp_test_number',{p_number:value}),'Salvar número de teste');
+    if(response.error)throw response.error;
+    if(!/^55[1-9][0-9]{9,10}$/.test(String(response.data||'')))throw Error('Não foi possível confirmar o número salvo.');
+    number=String(response.data);recipientInput.value=number;recipientDirty=false;saved=true;
+    destination.textContent='Destinatário do teste: +'+number;
+    recipientMessage.textContent='Número salvo. Para enviar, toque em Enviar teste.';
+   }catch(error){recipientMessage.textContent=error.message||'Não foi possível confirmar o salvamento. Confira a conexão antes de tentar novamente.'}
+   finally{recipientBusy=false;working=false;recipientSave.disabled=false;recipientInput.disabled=false;refresh.disabled=false;pairDisable(false)}
+   if(saved)await check();
+  };
   open.onclick=()=>{dialog.showModal();check()};refresh.onclick=check;dialog.querySelector('.close').onclick=()=>dialog.close();
   const connectionPanel=document.createElement('section');connectionPanel.id='fox-pairing-panel';connectionPanel.innerHTML='<h3>Conectar seu WhatsApp</h3><p>Escolha como autorizar a conexão. Pelo número, você pode usar apenas este celular.</p><button type="button" class="pair-qr">Conectar por QR Code</button><button type="button" class="pair-phone">Conectar pelo número</button><form class="pair-form" hidden><label>WhatsApp com DDD<input type="tel" inputmode="tel" autocomplete="tel" placeholder="(22) 99999-9999" required maxlength="22"></label><p>Brasil (+55). Use o número do WhatsApp que deseja conectar.</p><button type="submit">Gerar código</button></form><div class="pair-output" hidden><img class="pair-image" alt="QR Code para conectar seu WhatsApp" hidden><p class="pair-code" hidden></p><button type="button" class="pair-copy" hidden>Copiar código</button><p class="pair-instructions"></p></div><p class="pair-message" role="status"></p><p>Se o WhatsApp já estiver conectado, não é necessário parear novamente. Nunca compartilhe o código de conexão.</p>';
   dialog.insertBefore(connectionPanel,history);
@@ -951,3 +978,4 @@ body:has(dialog[open]) #fox-back-top,body:has(#root .fixed.inset-0) #fox-back-to
 </script>
 </body>
 </html>
+
