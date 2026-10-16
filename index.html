@@ -763,7 +763,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
  const message=gate.querySelector('#fox-cloud-message'),enter=gate.querySelector('#fox-cloud-enter');
 
  const signup=gate.querySelector('#fox-cloud-signup');
- function signupView(show){signup.hidden=!show;for(const id of ['#fox-cloud-login','#fox-cloud-eye','#fox-cloud-forgot','#fox-cloud-create'])gate.querySelector(id).hidden=show;message.textContent=show?'Seu teste de 7 dias começa no dia do cadastro.':''}
+ function signupView(show){try{const address=new URL(location.href);if(show)address.searchParams.set('cadastro','1');else address.searchParams.delete('cadastro');history.replaceState(history.state,'',address.pathname+address.search+address.hash)}catch{}signup.hidden=!show;for(const id of ['#fox-cloud-login','#fox-cloud-eye','#fox-cloud-forgot','#fox-cloud-create'])gate.querySelector(id).hidden=show;message.textContent=show?'Seu teste de 7 dias começa no dia do cadastro.':''}
  gate.querySelector('#fox-cloud-create').onclick=()=>{if(recovering)return;signupView(true)};
  gate.querySelector('#fox-cloud-back').onclick=()=>signupView(false);
  signup.onsubmit=async event=>{event.preventDefault();if(!client){message.textContent='Aguarde a conexão e tente novamente.';return}const f=signup.elements,button=signup.querySelector('button[type=submit]');button.disabled=true;try{const whatsapp=f.whatsapp.value.replace(/\D/g,'');if(!/^[0-9]{10,13}$/.test(whatsapp))throw Error('Informe o WhatsApp com DDD.');if(f.password.value!==f.confirmation.value)throw Error('As senhas não são iguais.');const result=await withTimeout(client.auth.signUp({email:f.email.value.trim(),password:f.password.value,options:{emailRedirectTo:location.origin+'/',data:{name:f.name.value.trim(),whatsapp}}}),'Cadastro');if(result.error)throw result.error;f.password.value='';f.confirmation.value='';if(result.data?.session)await client.auth.signOut({scope:'local'});signupView(false);message.textContent='Cadastro solicitado. Confira seu e-mail para confirmar a conta e entrar. Contas novas recebem 7 dias de teste, contando hoje. Se já possui conta, use Entrar ou Esqueci minha senha.'}catch(e){message.textContent=e.message||'Falha no cadastro'}finally{button.disabled=false}};
@@ -951,7 +951,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';script.onload=resolve;script.onerror=()=>reject(Error('Não foi possível carregar a conexão. Verifique a internet e atualize a página.'));document.head.appendChild(script)});
   client=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   client.auth.onAuthStateChange(event=>{if(event==='PASSWORD_RECOVERY')showRecovery();if(event==='SIGNED_OUT'&&started){blocked=true;gate.style.display='flex';message.textContent='Sessão encerrada. Atualize a página para entrar novamente.'}});
-  const session=await client.auth.getSession();enter.disabled=false;message.textContent='Entre com sua conta ou toque em Criar minha conta.';if(recovering)showRecovery();else if(session.data.session)await launch();
+  const session=await client.auth.getSession();enter.disabled=false;message.textContent='Entre com sua conta ou toque em Criar minha conta.';if(recovering)showRecovery();else if(session.data.session)await launch();else if(new URL(location.href).searchParams.get('cadastro')==='1')signupView(true);
  }catch(error){enter.disabled=!client;message.textContent=error.message||'Não foi possível conectar ao banco.'}
 })();
 
@@ -978,4 +978,5 @@ body:has(dialog[open]) #fox-back-top,body:has(#root .fixed.inset-0) #fox-back-to
 </script>
 </body>
 </html>
+
 
