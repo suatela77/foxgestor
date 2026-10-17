@@ -950,13 +950,11 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   async function refresh(){
    if(refreshing||blocked||leaving)return;refreshing=true;
    try{
-    // Assinatura existente significa mensalidade, mesmo quando o prazo é curto.
-    const subscription=await withTimeout(client.from('fox_subscriptions').select('user_id').eq('user_id',user.id).maybeSingle(),'Consulta da modalidade');
-    if(subscription.error)throw subscription.error;
-    if(subscription.data){notice.hidden=true;return}
-    const response=await withTimeout(client.from('fox_accounts').select('role,active,access_start,access_end').eq('user_id',user.id).maybeSingle(),'Consulta do teste');
+    const response=await withTimeout(client.rpc('fox_my_trial_status'),'Consulta do teste');
     if(response.error)throw response.error;
-    const info=response.data,start=dayNumber(info?.access_start),last=dayNumber(info?.access_end),now=dayNumber(today());
+    const info=response.data;
+    if(!info||info.mode!=='trial'){notice.hidden=true;return}
+    const start=dayNumber(info.access_start),last=dayNumber(info.access_end),now=dayNumber(info.today);
     if(info?.role!=='revenda'||!info.active||!Number.isFinite(start)||!Number.isFinite(last)||last<start||now<start){notice.hidden=true;return}
     const duration=last-start+1,remaining=last-now+1;
     title.textContent=duration===7?'🎁 Você está no teste grátis de 7 dias':'🎁 Você está em período de teste';
@@ -965,8 +963,9 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     end.textContent='📅 Último dia do teste: '+info.access_end.split('-').reverse().join('/')+' (até o fim do dia, horário de Brasília).';
     notice.dataset.urgent=String(remaining<=2);notice.hidden=false;
    }catch(error){
-    // Não inventa prazo nem impede o login se a consulta informativa falhar.
-    notice.hidden=true;console.warn('Não foi possível consultar o aviso do teste.');
+    title.textContent='Prazo de acesso';
+    count.textContent='Não foi possível consultar seu período de teste. Atualize a página ou contate o administrador.';
+    end.textContent='';notice.hidden=false;
    }finally{refreshing=false}
   }
   refresh();setInterval(refresh,60000);
