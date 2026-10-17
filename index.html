@@ -925,6 +925,55 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
  }
 
 
+ // Prazo informativo: usa somente dados da própria conta; não altera o acesso.
+ function setupTrialNotice(){
+  const notice=document.createElement('section');notice.id='fox-trial-notice';
+  notice.hidden=true;notice.setAttribute('aria-label','Período de teste');
+  const title=document.createElement('strong'),count=document.createElement('p'),end=document.createElement('p');
+  count.setAttribute('role','status');count.setAttribute('aria-live','polite');
+  notice.append(title,count,end);
+  const css=document.createElement('style');
+  css.textContent='#fox-trial-notice{box-sizing:border-box;margin:12px auto;padding:16px 18px;width:calc(100% - 24px);max-width:960px;border:1px solid #ff9b54;border-radius:14px;background:#302013;color:#fff;font:15px/1.5 system-ui;overflow-wrap:anywhere}#fox-trial-notice[hidden]{display:none!important}#fox-trial-notice strong{display:block;font-size:17px;color:#ffbd89}#fox-trial-notice p{margin:5px 0 0}#fox-trial-notice[data-urgent=true]{background:#42201d;border-color:#ff897c}';
+  document.head.appendChild(css);
+  const root=document.getElementById('root');document.body.insertBefore(notice,root);
+  let refreshing=false;
+  const dayNumber=value=>{
+   if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return NaN;
+   const [y,m,d]=value.split('-').map(Number),date=new Date(Date.UTC(y,m-1,d));
+   return date.toISOString().slice(0,10)===value?date.getTime()/86400000:NaN;
+  };
+  const today=()=>{
+   const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+   const part=type=>parts.find(p=>p.type===type).value;
+   return part('year')+'-'+part('month')+'-'+part('day');
+  };
+  async function refresh(){
+   if(refreshing||blocked||leaving)return;refreshing=true;
+   try{
+    // Assinatura existente significa mensalidade, mesmo quando o prazo é curto.
+    const subscription=await withTimeout(client.from('fox_subscriptions').select('user_id').eq('user_id',user.id).maybeSingle(),'Consulta da modalidade');
+    if(subscription.error)throw subscription.error;
+    if(subscription.data){notice.hidden=true;return}
+    const response=await withTimeout(client.from('fox_accounts').select('role,active,access_start,access_end').eq('user_id',user.id).maybeSingle(),'Consulta do teste');
+    if(response.error)throw response.error;
+    const info=response.data,start=dayNumber(info?.access_start),last=dayNumber(info?.access_end),now=dayNumber(today());
+    if(info?.role!=='revenda'||!info.active||!Number.isFinite(start)||!Number.isFinite(last)||last<start||now<start){notice.hidden=true;return}
+    const duration=last-start+1,remaining=last-now+1;
+    title.textContent=duration===7?'🎁 Você está no teste grátis de 7 dias':'🎁 Você está em período de teste';
+    const text=remaining<=0?'Seu período de teste terminou.':remaining===1?'⏳ Seu teste termina hoje!': '⏳ Restam '+remaining+' dias de teste, incluindo hoje.';
+    if(count.textContent!==text)count.textContent=text;
+    end.textContent='📅 Último dia do teste: '+info.access_end.split('-').reverse().join('/')+' (até o fim do dia, horário de Brasília).';
+    notice.dataset.urgent=String(remaining<=2);notice.hidden=false;
+   }catch(error){
+    // Não inventa prazo nem impede o login se a consulta informativa falhar.
+    notice.hidden=true;console.warn('Não foi possível consultar o aviso do teste.');
+   }finally{refreshing=false}
+  }
+  refresh();setInterval(refresh,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+ }
+
+
  async function launch(){
   const verified=await withTimeout(client.auth.getUser(),"Verificação do login");if(verified.error||!verified.data.user)throw Error('Entre novamente para verificar seu acesso.');user=verified.data.user;
   message.textContent='Conferindo sua permissão…';const permission=await withTimeout(client.from('fox_accounts').select('role,active').eq('user_id',user.id).maybeSingle(),'Consulta da conta');if(permission.error)throw permission.error;account=permission.data;
@@ -978,6 +1027,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   setupWhatsApp();
   if(account.role==='master')setupTrialAdmin();
   else {
+   setupTrialNotice();
    let checkingAccess=false;
    const checkAccess=async()=>{if(checkingAccess||blocked)return;checkingAccess=true;let text='';try{const r=await client.rpc('fox_access_allowed');if(r.error)text='Não foi possível verificar seu acesso. Atualize a página para tentar novamente.';else if(r.data!==true)text='Mensalidade ou teste vencido, ou acesso suspenso. Contate o administrador para renovar. Seus dados foram preservados.'}catch{text='Não foi possível verificar seu acesso. Atualize a página para tentar novamente.'}finally{checkingAccess=false}if(text){blocked=true;clearTimeout(timer);for(const modal of document.querySelectorAll('dialog[open]'))modal.close();gate.style.display='flex';gate.querySelector('#fox-cloud-login').hidden=true;gate.querySelector('#fox-cloud-create').hidden=true;gate.querySelector('#fox-cloud-forgot').hidden=true;message.textContent=text;document.getElementById('root').style.display='none'}};
    setInterval(checkAccess,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkAccess()});
