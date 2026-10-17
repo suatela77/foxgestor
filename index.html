@@ -67,6 +67,10 @@ body{width:100%;max-width:100%;margin:0;overflow-x:hidden;background:#0a0a0a}
 #root *{min-width:0;box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
 #root header{position:relative!important;top:0!important;margin:0!important;transform:none!important}
 #fox-cloud-tools{position:relative;z-index:130000;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%;height:auto;min-height:42px;box-sizing:border-box;padding:8px 10px;background:#111;border-bottom:1px solid #333}
+@keyframes fox-expiry-pulse{0%,100%{color:#ffd166;box-shadow:0 0 0 transparent}50%{color:#fff2b3;box-shadow:0 0 10px #ffb30066}}
+#fox-account-expiry[data-urgent="true"]{animation:fox-expiry-pulse 1.6s ease-in-out infinite;border-radius:8px;background:#543700;padding:4px 7px}
+#fox-account-expiry[data-overdue="true"]{color:#ff9c92!important;background:#4d1c18}
+@media(prefers-reduced-motion:reduce){#fox-account-expiry[data-urgent="true"]{animation:none;border:1px solid #ffd166}}
 #fox-cloud-tools #fox-account-name{order:2;flex:0 0 100%;width:100%;min-width:0;box-sizing:border-box;margin:0;padding:12px 14px;border:1px solid #ffb84d;border-radius:14px;background:linear-gradient(110deg,#ff7900,#ffd166);color:#231303;font:800 19px/1.35 system-ui;text-align:center;overflow-wrap:anywhere;box-shadow:0 3px 12px #ff790026}
 #fox-cloud-tools #fox-cloud-status{position:static!important;max-width:calc(100% - 88px)!important;min-width:0;height:32px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/18px system-ui!important;padding:6px 8px!important;border-radius:8px!important}
 #fox-cloud-tools #fox-full-backup-open{position:static!important;width:80px;height:32px;flex-shrink:0;margin:0;padding:5px 7px!important;font:700 12px/20px system-ui!important;border-radius:8px!important}
@@ -1096,6 +1100,8 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     const response=await withTimeout(client.rpc('fox_my_trial_status'),'Consulta do teste');
     if(response.error)throw response.error;
     const info=response.data;
+    const expiry=document.getElementById('fox-account-expiry');
+    if(expiry){const date=info?.mode==='monthly'?info.due_date:info?.access_end;expiry.textContent=date&&/^\d{4}-\d{2}-\d{2}$/.test(date)?(info.mode==='monthly'?'📅 Vence: ':'🎁 Teste até: ')+date.split('-').reverse().join('/'):'📅 Vencimento não informado';expiry.title=info?.mode==='monthly'?'Bloqueio às 18h do vencimento, horário de Brasília.':'Teste válido até o fim do dia indicado, horário de Brasília.';const remaining=dayNumber(date)-dayNumber(today());expiry.dataset.urgent=String(Number.isFinite(remaining)&&remaining>=0&&remaining<=3);expiry.dataset.overdue=String(Number.isFinite(remaining)&&remaining<0);}
     if(!info||info.mode!=='trial'){notice.hidden=true;return}
     const start=dayNumber(info.access_start),last=dayNumber(info.access_end),now=dayNumber(info.today);
     if(info?.role!=='revenda'||!info.active||!Number.isFinite(start)||!Number.isFinite(last)||last<start||now<start){notice.hidden=true;return}
@@ -1106,6 +1112,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
     end.textContent='📅 Último dia do teste: '+info.access_end.split('-').reverse().join('/')+' (até o fim do dia, horário de Brasília).';
     notice.dataset.urgent=String(remaining<=2);notice.hidden=false;
    }catch(error){
+    const expiry=document.getElementById('fox-account-expiry');if(expiry){expiry.textContent='📅 Vencimento indisponível';delete expiry.dataset.urgent;delete expiry.dataset.overdue;}
     title.textContent='Prazo de acesso';
     count.textContent='Não foi possível consultar seu período de teste. Atualize a página ou contate o administrador.';
     end.textContent='';notice.hidden=false;
@@ -1139,6 +1146,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   }
   lastSaved=stable(saved?.payload||payload);installStorage();
   const badge=document.createElement('button');badge.id='fox-cloud-status';badge.textContent=dirty?'☁️ Alterações pendentes':'☁️ Salvo online';badge.style.cssText='position:fixed;left:8px;top:8px;z-index:130000;max-width:52vw;font-size:11px;background:#123426;color:white;border:1px solid #00d879;border-radius:12px;padding:7px';badge.onclick=flush;const tools=document.createElement('div');tools.id='fox-cloud-tools';document.body.insertBefore(tools,document.getElementById('root'));tools.appendChild(badge);
+  const expiry=document.createElement('span');expiry.id='fox-account-expiry';expiry.setAttribute('role','status');expiry.style.cssText='flex:1;min-width:110px;text-align:right;color:#ffd166;font:700 12px/1.5 system-ui;overflow-wrap:anywhere';expiry.textContent=account.role==='master'?'👑 Sem vencimento':'📅 Consultando vencimento…';tools.appendChild(expiry);
   const greeting=document.createElement('div');greeting.id='fox-account-name';greeting.setAttribute('aria-label','Conta conectada');const displayName=String(account.name||user.user_metadata?.name||'').trim();greeting.textContent=displayName?'Olá, '+displayName+'!':'Olá!';tools.appendChild(greeting);
   window.foxCloudLogout=async(options={})=>{
    if(leaving)return;leaving=true;
