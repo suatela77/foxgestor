@@ -66,7 +66,8 @@ body{width:100%;max-width:100%;margin:0;overflow-x:hidden;background:#0a0a0a}
 #root,#root>div{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 #root *{min-width:0;box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
 #root header{position:relative!important;top:0!important;margin:0!important;transform:none!important}
-#fox-cloud-tools{position:sticky;top:0;z-index:130000;display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:42px;box-sizing:border-box;padding:4px 10px;background:#111;border-bottom:1px solid #333}
+#fox-cloud-tools{position:relative;z-index:130000;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%;height:auto;min-height:42px;box-sizing:border-box;padding:8px 10px;background:#111;border-bottom:1px solid #333}
+#fox-cloud-tools #fox-account-name{order:2;flex:0 0 100%;width:100%;min-width:0;box-sizing:border-box;margin:0;padding:12px 14px;border:1px solid #ffb84d;border-radius:14px;background:linear-gradient(110deg,#ff7900,#ffd166);color:#231303;font:800 19px/1.35 system-ui;text-align:center;overflow-wrap:anywhere;box-shadow:0 3px 12px #ff790026}
 #fox-cloud-tools #fox-cloud-status{position:static!important;max-width:calc(100% - 88px)!important;min-width:0;height:32px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px/18px system-ui!important;padding:6px 8px!important;border-radius:8px!important}
 #fox-cloud-tools #fox-full-backup-open{position:static!important;width:80px;height:32px;flex-shrink:0;margin:0;padding:5px 7px!important;font:700 12px/20px system-ui!important;border-radius:8px!important}
 #fox-bottom-dock{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important;max-width:520px!important;box-sizing:border-box!important}
@@ -1127,7 +1128,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   }
   lastSaved=stable(saved?.payload||payload);installStorage();
   const badge=document.createElement('button');badge.id='fox-cloud-status';badge.textContent=dirty?'☁️ Alterações pendentes':'☁️ Salvo online';badge.style.cssText='position:fixed;left:8px;top:8px;z-index:130000;max-width:52vw;font-size:11px;background:#123426;color:white;border:1px solid #00d879;border-radius:12px;padding:7px';badge.onclick=flush;const tools=document.createElement('div');tools.id='fox-cloud-tools';document.body.insertBefore(tools,document.getElementById('root'));tools.appendChild(badge);
-  const greeting=document.createElement('div');greeting.id='fox-account-name';greeting.setAttribute('aria-label','Conta conectada');greeting.style.cssText='padding:48px 16px 14px;background:#111;color:#fff;font:700 20px system-ui;overflow-wrap:anywhere';const displayName=String(account.name||user.user_metadata?.name||'').trim();greeting.textContent=displayName?'Olá, '+displayName+'!':'Olá!';tools.appendChild(greeting);
+  const greeting=document.createElement('div');greeting.id='fox-account-name';greeting.setAttribute('aria-label','Conta conectada');const displayName=String(account.name||user.user_metadata?.name||'').trim();greeting.textContent=displayName?'Olá, '+displayName+'!':'Olá!';tools.appendChild(greeting);
   window.foxCloudLogout=async(options={})=>{
    if(leaving)return;leaving=true;
    const automatic=options.automatic===true;
