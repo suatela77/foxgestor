@@ -1174,7 +1174,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';script.onload=resolve;script.onerror=()=>reject(Error('Não foi possível carregar a conexão. Verifique a internet e atualize a página.'));document.head.appendChild(script)});
   client=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   client.auth.onAuthStateChange(event=>{if(event==='PASSWORD_RECOVERY')showRecovery();if(event==='SIGNED_OUT'&&started){blocked=true;gate.style.display='flex';message.textContent='Sessão encerrada. Atualize a página para entrar novamente.'}});
-  const session=await client.auth.getSession();enter.disabled=false;message.textContent='Entre com sua conta ou toque em Criar minha conta.';if(recovering)showRecovery();else if(session.data.session)await launch();else if(new URL(location.href).searchParams.get('cadastro')==='1')signupView(true);
+  const session=await client.auth.getSession();enter.disabled=false;message.textContent='Entre com sua conta ou toque em Criar minha conta.';if(recovering)showRecovery();else if(new URL(location.href).searchParams.get('cadastro')==='1'||new URL(location.href).searchParams.has('convite'))signupView(true);else if(session.data.session)await launch();
  }catch(error){enter.disabled=!client;message.textContent=error.message||'Não foi possível conectar ao banco.'}
 })();
 
