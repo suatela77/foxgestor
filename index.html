@@ -1106,7 +1106,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
 
  async function launch(){
   const verified=await withTimeout(client.auth.getUser(),"Verificação do login");if(verified.error||!verified.data.user)throw Error('Entre novamente para verificar seu acesso.');user=verified.data.user;
-  message.textContent='Conferindo sua permissão…';const permission=await withTimeout(client.from('fox_accounts').select('role,active').eq('user_id',user.id).maybeSingle(),'Consulta da conta');if(permission.error)throw permission.error;account=permission.data;
+  message.textContent='Conferindo sua permissão…';const permission=await withTimeout(client.from('fox_accounts').select('role,active,name').eq('user_id',user.id).maybeSingle(),'Consulta da conta');if(permission.error)throw permission.error;account=permission.data;
   if(!account?.active||!['master','revenda'].includes(account.role)||(account.role==='master'&&user.id!==masterUid))throw Error('Conta aguardando aprovação ou com acesso suspenso. Contate o administrador.');
   if(account.role==='revenda'){const allowed=await withTimeout(client.rpc('fox_access_allowed'),'Prazo de acesso');if(allowed.error)throw allowed.error;if(!allowed.data)throw Error('Seu acesso ou o de um responsável da rede está vencido ou suspenso, ou ainda não começou. Contate sua revenda para regularizar.');}
   message.textContent='Carregando seus dados…';const result=await withTimeout(client.from('fox_state').select('payload,revision').eq('user_id',user.id).maybeSingle(),'Carregamento dos dados');if(result.error)throw result.error;
@@ -1127,6 +1127,7 @@ Obs: cliente pagou via Pix`,className:"w-full min-h-[110px] bg-[#171717] border 
   }
   lastSaved=stable(saved?.payload||payload);installStorage();
   const badge=document.createElement('button');badge.id='fox-cloud-status';badge.textContent=dirty?'☁️ Alterações pendentes':'☁️ Salvo online';badge.style.cssText='position:fixed;left:8px;top:8px;z-index:130000;max-width:52vw;font-size:11px;background:#123426;color:white;border:1px solid #00d879;border-radius:12px;padding:7px';badge.onclick=flush;const tools=document.createElement('div');tools.id='fox-cloud-tools';document.body.insertBefore(tools,document.getElementById('root'));tools.appendChild(badge);
+  const greeting=document.createElement('div');greeting.id='fox-account-name';greeting.setAttribute('aria-label','Conta conectada');greeting.style.cssText='padding:48px 16px 14px;background:#111;color:#fff;font:700 20px system-ui;overflow-wrap:anywhere';const displayName=String(account.name||user.user_metadata?.name||'').trim();greeting.textContent=displayName?'Olá, '+displayName+'!':'Olá!';tools.appendChild(greeting);
   window.foxCloudLogout=async(options={})=>{
    if(leaving)return;leaving=true;
    const automatic=options.automatic===true;
