@@ -206,6 +206,13 @@ window.foxValidateNewClient=function(){
 document.addEventListener('input',function(event){if(ids.includes(event.target.id))clear(event.target);});
 })();
 </script>
+<style id="fox-search-highlight">
+#fox-client-search-row{position:sticky;top:0;z-index:20;padding:10px;margin-left:-4px;margin-right:-4px;border-radius:16px;background:linear-gradient(135deg,#ff7a1a,#ef2b55);box-shadow:0 8px 24px rgba(239,43,85,.35)}
+#fox-client-search{height:52px!important;font-size:17px!important;font-weight:600;color:#111!important;background:#ffffff!important;border:0!important;border-radius:12px!important;padding-left:14px!important}
+#fox-client-search::placeholder{color:#555!important;font-weight:600}
+#fox-client-search:focus{outline:3px solid #ffc23d!important;outline-offset:1px}
+#fox-client-search-row button{height:52px!important;font-size:15px!important;font-weight:800;color:#fff!important;background:#111!important;border:0!important;border-radius:12px!important}
+</style>
 </head>
 <body>
 <!-- Abertura com vídeo removida (01/11/2026): o sistema abre direto. -->
