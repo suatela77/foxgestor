@@ -1189,6 +1189,103 @@ body:has(dialog[open]) #fox-back-top,body:has(#root .fixed.inset-0) #fox-back-to
  document.body.appendChild(button);document.addEventListener('scroll',sync,{passive:true,capture:true});window.addEventListener('scroll',sync,{passive:true});window.addEventListener('resize',sync,{passive:true});setInterval(sync,1000);sync();
 })();
 </script>
+<style id="fox-renewal-index-style">
+#fox-renewal-open{position:static;height:32px;flex-shrink:0;margin:0;padding:5px 10px;background:#292929;color:#fff;border:1px solid #00d879;border-radius:16px;font:700 12px/20px system-ui;cursor:pointer}
+#fox-renewal-open.fox-renewal-floating{position:fixed;left:12px;top:12px;z-index:120000}
+#fox-renewal-dialog{width:min(520px,calc(100vw - 24px));max-height:88vh;overflow:auto;box-sizing:border-box;background:#141414;color:#fff;border:2px solid #00d879;border-radius:18px;padding:18px;font-family:system-ui,sans-serif}
+#fox-renewal-dialog::backdrop{background:#000c}
+#fox-renewal-dialog h2{font-size:20px;margin:0 0 4px}
+#fox-renewal-dialog .fr-sub{font-size:13px;color:#bbb;margin:0 0 14px;line-height:1.5}
+#fox-renewal-dialog select{width:100%;min-height:48px;font-size:16px;background:#242424;color:#fff;border:2px solid #555;border-radius:10px;padding:8px 12px;margin-bottom:14px}
+.fr-highlights{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.fr-hl{border-radius:12px;padding:10px;font-size:12px;line-height:1.4}
+.fr-hl b{display:block;font-size:15px;margin-top:2px;overflow-wrap:anywhere}
+.fr-best{background:#0f2a1b;border:1px solid #2fbf71}.fr-worst{background:#2c1212;border:1px solid #e05555}
+.fr-total{background:#10202e;border:1px solid #3a8fd6;border-radius:12px;padding:12px;margin-bottom:14px;font-size:14px}
+.fr-total b{font-size:24px;color:#5cb8ff}
+.fr-row{background:#1c1c1c;border:1px solid #333;border-radius:12px;padding:12px;margin-bottom:10px}
+.fr-row-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.fr-name{font-weight:800;font-size:15px;overflow-wrap:anywhere}
+.fr-pct{font-weight:900;font-size:20px;flex-shrink:0}
+.fr-bar{height:8px;background:#333;border-radius:4px;margin:8px 0 6px;overflow:hidden}
+.fr-bar i{display:block;height:100%;border-radius:4px}
+.fr-meta{font-size:12px;color:#ccc;line-height:1.5}
+.fr-empty{color:#bbb;font-size:14px;text-align:center;padding:20px 0}
+#fox-renewal-close{width:100%;min-height:48px;margin-top:6px;border:0;border-radius:10px;background:#ff6a00;color:#111;font-weight:800;font-size:16px;cursor:pointer}
+</style>
+<script id="fox-renewal-index-script">
+(()=>{
+ const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+ const read=k=>{try{const s=window.foxStorage||localStorage;const r=s.getItem(k);const v=r?JSON.parse(r):[];return Array.isArray(v)?v:[]}catch{return[]}};
+ const monthKey=v=>{if(!v)return'';const s=String(v);if(/^\d{4}-\d{2}/.test(s)&&s.length<=10)return s.slice(0,7);const d=new Date(s);if(!Number.isFinite(d.getTime()))return'';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
+ const norm=s=>String(s||'').trim().toUpperCase()||'SEM SERVIDOR';
+ const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+ function calc(month){
+  const clientes=read('fox_clientes');
+  const receitas=read(window.FOX_RECEITA_KEY||'fox_receitas');
+  const byId=new Map(clientes.map(c=>[String(c.id),c]));
+  const hoje=todayISO();const stats=new Map();
+  const get=k=>{if(!stats.has(k))stats.set(k,{renovou:new Set(),naoRenovou:new Set(),aVencer:0});return stats.get(k)};
+  // Quem renovou no mês (um cliente conta uma vez, mesmo pagando mais de uma vez)
+  for(const r of receitas){
+   if(!r||r.tipo!=='renovacao'||monthKey(r.data)!==month)continue;
+   const c=r.clienteId!=null?byId.get(String(r.clienteId)):null;
+   let serv=c&&c.servico;
+   if(!serv&&r.origem){const p=String(r.origem).split(' - ');if(p.length>1)serv=p[p.length-1]}
+   get(norm(serv)).renovou.add(String(r.clienteId||r.clienteNome||r.id));
+  }
+  // Quem venceu no mês e ainda não renovou (vencimento continua parado nesse mês)
+  for(const c of clientes){
+   if(!c||!c.fim||monthKey(c.fim)!==month)continue;
+   const s=get(norm(c.servico));const id=String(c.id);
+   if(s.renovou.has(id))continue;
+   if(String(c.fim).slice(0,10)<hoje)s.naoRenovou.add(id);else s.aVencer++;
+  }
+  const rows=[...stats].map(([nome,s])=>{const ren=s.renovou.size,nao=s.naoRenovou.size,tot=ren+nao;return{nome,ren,nao,tot,aVencer:s.aVencer,pct:tot?ren/tot*100:null}});
+  rows.sort((a,b)=>(b.pct??-1)-(a.pct??-1)||b.tot-a.tot);
+  return rows;
+ }
+
+ function color(p){return p>=75?'#2fd27c':p>=50?'#ffc23d':'#ff5c5c'}
+ function render(){
+  const month=document.getElementById('fox-renewal-month').value;
+  const rows=calc(month);const box=document.getElementById('fox-renewal-body');
+  const valid=rows.filter(r=>r.pct!==null);
+  if(!rows.length){box.innerHTML='<p class="fr-empty">Nenhum vencimento ou renovação neste mês.</p>';return}
+  const ren=valid.reduce((a,r)=>a+r.ren,0),tot=valid.reduce((a,r)=>a+r.tot,0);
+  let html='';
+  if(tot)html+=`<div class="fr-total">Renovação geral do mês<br><b>${(ren/tot*100).toFixed(0)}%</b><br>${ren} de ${tot} clientes renovaram</div>`;
+  const best=valid[0],worst=valid[valid.length-1];if(valid.length>1&&best.pct!==worst.pct){
+   html+=`<div class="fr-highlights"><div class="fr-hl fr-best">🏆 Maior renovação<b>${esc(best.nome)}</b>${best.pct.toFixed(0)}%</div><div class="fr-hl fr-worst">⚠️ Menor renovação<b>${esc(worst.nome)}</b>${worst.pct.toFixed(0)}%</div></div>`}
+  for(const r of rows){
+   const p=r.pct;
+   html+=`<div class="fr-row"><div class="fr-row-top"><span class="fr-name">${esc(r.nome)}</span><span class="fr-pct" style="color:${p===null?'#888':color(p)}">${p===null?'—':p.toFixed(0)+'%'}</span></div>`+
+   (p===null?'':`<div class="fr-bar"><i style="width:${p}%;background:${color(p)}"></i></div>`)+
+   `<div class="fr-meta">✅ Renovaram: ${r.ren} &nbsp; ❌ Não renovaram: ${r.nao}${r.aVencer?` &nbsp; ⏳ Ainda vão vencer: ${r.aVencer}`:''}</div></div>`;
+  }
+  box.innerHTML=html;
+ }
+
+ function setup(){
+  if(!document.getElementById('fox-cloud-exit'))return; // só depois do login
+  if(document.getElementById('fox-renewal-open'))return;
+  const dlg=document.createElement('dialog');dlg.id='fox-renewal-dialog';
+  const now=new Date();let opts='';
+  for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');opts+=`<option value="${k}">${MESES[d.getMonth()]} de ${d.getFullYear()}${i===0?' (mês atual)':''}</option>`}
+  dlg.innerHTML=`<h2>📊 Índice de renovação</h2><p class="fr-sub">Dos clientes que venceram no mês, quantos renovaram, separado por servidor.</p><label for="fox-renewal-month" style="font-size:13px;font-weight:700">Mês</label><select id="fox-renewal-month">${opts}</select><div id="fox-renewal-body"></div><button id="fox-renewal-close" type="button">Fechar</button>`;
+  document.body.appendChild(dlg);
+  dlg.querySelector('#fox-renewal-month').onchange=render;
+  dlg.querySelector('#fox-renewal-close').onclick=()=>dlg.close();
+  const btn=document.createElement('button');btn.id='fox-renewal-open';btn.type='button';btn.textContent='📊 Renovação';
+  btn.onclick=()=>{render();dlg.showModal()};
+  const tools=document.getElementById('fox-cloud-tools');
+  if(tools)tools.appendChild(btn);else{btn.classList.add('fox-renewal-floating');document.body.appendChild(btn)}
+ }
+ setInterval(()=>{setup();const b=document.getElementById('fox-renewal-open');if(b&&!document.getElementById('fox-cloud-exit')){b.remove();const d=document.getElementById('fox-renewal-dialog');if(d)d.remove()}},1000);
+})();
+</script>
 </body>
 </html>
 
