@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/pedido-servidor.txt']
+    paths: ['.github/pedido-servidor.txt', '.github/servidor/aplicar.sql']
 permissions:
   contents: write
 jobs:
@@ -17,6 +17,12 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.54.11
+      - name: Aplicar alteração no banco
+        run: |
+          set -e
+          if [ -f .github/servidor/aplicar.sql ]; then
+            jq -n --rawfile q .github/servidor/aplicar.sql '{query:$q}' | curl -sf -X POST -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" "https://api.supabase.com/v1/projects/$REF/database/query" -d @- > /dev/null && echo "Alteração aplicada."
+          fi
       - name: Copiar funções e banco (criptografado)
         run: |
           set -e
@@ -30,7 +36,7 @@ jobs:
           q "select n.nspname, p.proname, pg_get_functiondef(p.oid) def from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public') and p.prokind='f'" > out/sql_funcoes.json || echo "falhou sql funcoes"
           q "select jobid, schedule, command, jobname, active from cron.job" > out/cron.json || echo "sem cron"
           q "select table_name, column_name, data_type from information_schema.columns where table_schema='public' order by table_name, ordinal_position" > out/colunas.json || true
-          q "select key from public.fox_state limit 0" > /dev/null 2>&1 || true
+          q "select n, c.message from generate_series(-3,10) n, public.fox_reminder_candidates('84560942-007c-4291-8f8a-a64466adb345'::uuid, (now() at time zone 'America/Sao_Paulo')::date + n) c where c.client_id not like 'fox-subscription:%' limit 6" > out/teste_mensagens.json || echo "falhou teste"
           tar czf copia.tgz out
           openssl rand -hex 32 > k.txt
           openssl enc -aes-256-cbc -pbkdf2 -salt -in copia.tgz -out copia.tgz.enc -pass file:k.txt
