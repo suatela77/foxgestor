@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths: ['.github/pedido-servidor.txt']
 permissions:
-  contents: read
+  contents: write
 jobs:
   copia:
     runs-on: ubuntu-latest
@@ -36,10 +36,9 @@ jobs:
           openssl enc -aes-256-cbc -pbkdf2 -salt -in copia.tgz -out copia.tgz.enc -pass file:k.txt
           openssl pkeyutl -encrypt -pubin -inkey .github/chave/pub.pem -in k.txt -out k.enc
           sudo rm -rf out; rm -f copia.tgz k.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: copia
-          path: |
-            copia.tgz.enc
-            k.enc
-          retention-days: 1
+      - name: Guardar cópia criptografada no ramo copia
+        run: |
+          mkdir /tmp/c && mv copia.tgz.enc k.enc /tmp/c/
+          cd /tmp/c && git init -q -b copia && git config user.name bot && git config user.email bot@users.noreply.github.com
+          git add . && git commit -qm "copia criptografada"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" copia
