@@ -35,7 +35,7 @@ jobs:
           openssl rand -hex 32 > k.txt
           openssl enc -aes-256-cbc -pbkdf2 -salt -in copia.tgz -out copia.tgz.enc -pass file:k.txt
           openssl pkeyutl -encrypt -pubin -inkey .github/chave/pub.pem -in k.txt -out k.enc
-          rm -rf out copia.tgz k.txt
+          sudo rm -rf out; rm -f copia.tgz k.txt
       - uses: actions/upload-artifact@v4
         with:
           name: copia
