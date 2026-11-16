@@ -38,8 +38,8 @@ with client_notices as (
   '🦊 Olá, *'||
   upper(left(split_part(coalesce(nullif(trim(c->>'nome'),''),'cliente'),' ',1),60))
   ||'*! '||
-  case when nullif(trim(c->>'plano'),'') is not null
-   then 'Seu plano *'||left(trim(c->>'plano'),60)||'* '
+  case when nullif(trim(regexp_replace(c->>'plano','\s*\(\s*R\$[^)]*\)\s*$','')),'') is not null
+   then 'Seu plano *'||left(trim(regexp_replace(c->>'plano','\s*\(\s*R\$[^)]*\)\s*$','')),60)||'* '
    else 'Sua assinatura ' end
   ||case delta
    when 3 then 'vence em *3 dias* ('||to_char(due,'DD/MM')||').'
